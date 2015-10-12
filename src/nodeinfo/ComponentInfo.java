@@ -1,0 +1,23 @@
+package nodeinfo;
+
+import core.Node;
+
+public class ComponentInfo implements NodeInfo {
+    public Node node;
+    public boolean visited = false;
+    public int component = -1;
+
+    public ComponentInfo(Node node) {
+        this.node = node;
+    }
+
+    public ComponentInfo(ComponentInfo other) {
+        node = other.node;
+        visited = other.visited;
+        component = other.component;
+    }
+
+    public Node get_node() {
+        return node;
+    }
+}
