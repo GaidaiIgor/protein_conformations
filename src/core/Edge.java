@@ -1,9 +1,9 @@
 package core;
 
-public class Edge {
-    public Node node1;
-    public Node node2;
-    public double weight;
+public final class Edge {
+    public final Node node1;
+    public final Node node2;
+    public final double weight;
 
     public Edge(Node node1, Node node2, double weight) {
         this.node1 = node1;

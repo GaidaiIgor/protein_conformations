@@ -3,13 +3,13 @@ package nodeinfo;
 import core.Node;
 import core.Path;
 
+import java.util.HashSet;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 public class LongestPathInfo implements NodeInfo {
     public Node node;
-    public Set<Path> paths = new TreeSet<>();
+    public Set<Path> paths = new HashSet<>();
     public Path best_path = null;
 
     public LongestPathInfo(Node node) {
@@ -21,8 +21,8 @@ public class LongestPathInfo implements NodeInfo {
     // deep copy (almost)
     public LongestPathInfo(LongestPathInfo other) {
         node = other.node;
-        paths = other.paths.stream().map(Path::deep_copy).collect(Collectors.toCollection(TreeSet::new));
-        best_path = other.best_path.deep_copy();
+        paths = other.paths.stream().map(Path::copy).collect(Collectors.toCollection(HashSet::new));
+        best_path = other.best_path.copy();
     }
 
     public Node get_node() {

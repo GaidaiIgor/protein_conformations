@@ -16,8 +16,8 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class Graph {
-    private static final Comparator<List<Integer>> pair_comparator = Comparator.<List<Integer>>comparingInt(l -> l.get(0)).thenComparing
-            (l -> l.get(1));
+    private static final Comparator<List<Integer>> pair_comparator = Comparator.<List<Integer>>comparingInt(l -> l.get(0)).
+            thenComparing(l -> l.get(1));
     //    private final double double_comparison_tolerance = 0.0001;
     private final double score_comparison_tolerance = 0.1;
     //    private final Comparator<Double> double_comparator = new utility.ApproximateComparator(double_comparison_tolerance);
@@ -46,11 +46,6 @@ public class Graph {
             current.subtree_size = children.stream().mapToInt(c -> c.subtree_size).sum() + 1;
         }
     }
-
-//    private static List<TreeInfo> get_neighbours(TreeInfo node, List<TreeInfo> tree)
-//    {
-//        return get_neighbours_stream(node, tree).collect(Collectors.toList());
-//    }
 
     private static TreeInfo get_parent(TreeInfo current, List<TreeInfo> tree) {
         return get_neighbours_stream(current, tree).filter(n -> n.level < current.level).findFirst().orElse(null);
@@ -281,11 +276,29 @@ public class Graph {
         writer.flush();
     }
 
+    public Set<Path> calculate_suboptimal_longest_path(PathEstimator estimator, int max_nodes_per_graph, double max_paths_per_node) {
+        Graph decomposed = hierarchical_decomposition(max_nodes_per_graph);
+        Set<Path> paths = decomposed.calculate_suboptimal_helper(estimator, this, max_paths_per_node);
+    }
+
+    private Set<Path> calculate_suboptimal_helper(PathEstimator estimator, Graph initial, double max_paths_per_node) {
+        add_source_sink();
+        LongestPathInfo path_info = calculate_longest_paths(nodes.size() - 2, estimator).get(nodes.size() - 1);
+        if (path_info.paths.iterator().next().edges.get(0).node2.underlying_graph == null) {
+            return path_info.paths;
+        }
+        for (Path path : path_info.paths) {
+            Set<Path> current_paths = path.edges.get(0).node1.underlying_graph.calculate_suboptimal_helper(estimator, initial,
+                    max_paths_per_node);
+            current_paths.addAll()
+        }
+    }
+
     // O*(V!)
     public List<LongestPathInfo> calculate_longest_paths(int start_node_id, PathEstimator estimator) {
         List<LongestPathInfo> infos = nodes.stream().map(LongestPathInfo::new).collect(Collectors.toList());
         LongestPathInfo start_node = infos.get(start_node_id);
-        Path trivial_path = new Path().extend(start_node_id, 0, 0);
+        Path trivial_path = Path.get_trivial_path(start_node_id, estimator);
         start_node.paths.add(trivial_path);
         start_node.best_path = trivial_path;
         List<Edge> all_edges = edges.stream().collect(Collectors.toList());
@@ -300,10 +313,8 @@ public class Graph {
                 LongestPathInfo node1_next_info = next_infos.get(edge.node1.id);
                 LongestPathInfo node2_previous_info = infos.get(edge.node2.id);
                 LongestPathInfo node2_next_info = next_infos.get(edge.node2.id);
-                estimation_changed = try_update_next(node1_previous_info, node2_next_info, edge.weight, estimator, nodes) ||
-                        estimation_changed;
-                estimation_changed = try_update_next(node2_previous_info, node1_next_info, edge.weight, estimator, nodes) ||
-                        estimation_changed;
+                estimation_changed = estimation_changed || try_update_next(node1_previous_info, node2_next_info, edge, estimator);
+                estimation_changed = estimation_changed || try_update_next(node2_previous_info, node1_next_info, edge, estimator);
             }
             infos = next_infos;
         }
@@ -311,10 +322,11 @@ public class Graph {
     }
 
     // O*(V!)
-    private boolean try_update_next(LongestPathInfo previous, LongestPathInfo next, double edge_weight, PathEstimator estimator,
-                                    List<Node> graph) {
+    // Tries to extend every edges in previous using next as next vertex. Replace best edges in next if any of the obtained paths will be
+    // better.
+    private boolean try_update_next(LongestPathInfo previous, LongestPathInfo next, Edge edge, PathEstimator estimator) {
         List<Path> compatible_paths = previous.paths.stream().filter(p -> !p.used_ids.contains(next.node.id)).
-                map(p -> p.deep_copy().extend(next.node.id, edge_weight, estimator.score(p, next, edge_weight, graph))).
+                map(p -> Path.merge(p, Path.get_trivial_path(next.node.id, estimator), p.edges.size() - 1, 0, edge, estimator)).
                 collect(Collectors.toList());
         if (compatible_paths.isEmpty()) {
             return false;
