@@ -27,7 +27,7 @@ public class FileFormatConverter {
         PrintWriter out = new PrintWriter(graph_description);
         out.println(max_id + 1);
         out.println(edges.size());
-        edges.forEach(e -> out.format("%d %d %f%n", e.node1.id, e.node2.id, e.weight));
+        edges.forEach(e -> out.format("%d %d %f%n", e.first.id, e.second.id, e.weight));
         out.flush();
     }
 }

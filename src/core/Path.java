@@ -18,24 +18,30 @@ public class Path {
     public Path() {
     }
 
-    public static Path get_trivial_path(int node_id, PathEstimator estimator) {
+    public Path(Set<Integer> used_ids, List<Edge> edges, double total_weight, double score) {
+        this.used_ids = used_ids;
+        this.edges = edges;
+        this.total_weight = total_weight;
+        this.score = score;
+    }
+
+    public static Path get_trivial_path(Node single_node, PathEstimator estimator) {
         Path new_path = new Path();
-        new_path.used_ids.add(node_id);
+        new_path.used_ids.add(single_node.id);
+        new_path.edges.add(new Edge(null, single_node, 0));
         new_path.score = estimator.path_score(new_path);
         return new_path;
     }
 
     // copy edges by reference
-    public static Path merge(Path path1, Path path2, int path1_node_index, int path2_node_index, Edge bridge, PathEstimator estimator) {
+    public static Path merge(Path path1, Path path2, int path1_break_index, int path2_break_index, Edge bridge, PathEstimator estimator) {
         Path new_path = new Path();
 
-        List<Edge> new_path_edges = path1.edges.subList(0, path1_node_index - 1);
-        new_path_edges.add(bridge);
-        new_path_edges.addAll(path2.edges.subList(path2_node_index, path2.edges.size() - 1));
-        new_path.edges = new_path_edges;
+        new_path.edges.addAll(path1.edges.subList(0, path1_break_index + 1));
+        new_path.edges.add(bridge);
+        new_path.edges.addAll(path2.edges.subList(path2_break_index + 1, path2.edges.size()));
 
-        new_path.used_ids.add(path1.edges.get(0).node1.id);
-        new_path.edges.forEach(e -> new_path.used_ids.add(e.node2.id));
+        new_path.edges.forEach(e -> new_path.used_ids.add(e.second.id));
 
         new_path.total_weight = new_path.edges.stream().collect(Collectors.summingDouble(e -> e.weight));
         new_path.score = estimator.path_score(new_path);
@@ -70,7 +76,6 @@ public class Path {
             return false;
         }
         Path other = (Path) object;
-        return edges.size() == other.edges.size() && IntStream.range(0, edges.size()).mapToObj(i -> edges.get(i).equals(other.edges.get
-                (i))).allMatch(b -> b);
+        return edges.size() == other.edges.size() && IntStream.range(0, edges.size()).mapToObj(i -> edges.get(i).equals(other.edges.get(i))).allMatch(b -> b);
     }
 }

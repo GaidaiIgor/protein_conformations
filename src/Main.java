@@ -1,11 +1,14 @@
 import core.Graph;
+import core.Path;
 import estimators.LongestPathEstimator;
+import estimators.PathEstimator;
 import nodeinfo.LongestPathInfo;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 class Main {
     public static void main(String[] args) {
@@ -22,9 +25,11 @@ class Main {
 //            graph_description.close();
 
             int max_nodes_per_graph = 3; // > 1
+            long max_paths_per_node = 100;
+            PathEstimator estimator = new LongestPathEstimator();
             FileInputStream input = new FileInputStream("input");
             Graph graph = Graph.get_from_input_stream(input);
-            Graph test = graph.hierarchical_decomposition(max_nodes_per_graph);
+            Set<Path> longest = graph.calculate_suboptimal_longest_path(estimator, max_nodes_per_graph, max_paths_per_node);
 
             FileOutputStream graph_dot = new FileOutputStream("graph.dot");
             graph.write_dot_representation(graph_dot);
