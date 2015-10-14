@@ -8,4 +8,6 @@ public interface PathEstimator {
     double path_connection_score(Path path1, Path path2, int path1_node_index, int path2_node_index, Edge edge);
 
     double path_score(Path path);
+
+    Path merge_paths(Path path1, Path path2);
 }

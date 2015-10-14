@@ -16,14 +16,15 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class Graph {
-    private static final Comparator<List<Integer>> pair_comparator = Comparator.<List<Integer>>comparingInt(l -> l.get(0)).
-            thenComparing(l -> l.get(1));
+    //    private static final Comparator<List<Integer>> pair_comparator = Comparator.<List<Integer>>comparingInt(l -> l.get(0)).
+//            thenComparing(l -> l.get(1));
     //    private final double double_comparison_tolerance = 0.0001;
     private final double score_comparison_tolerance = 0.1;
     //    private final Comparator<Double> double_comparator = new utility.ApproximateComparator(double_comparison_tolerance);
     private final Comparator<Double> score_comparator = new ApproximateComparator(score_comparison_tolerance);
     private List<Node> nodes = new ArrayList<>();
     private List<Edge> edges = new ArrayList<>();
+    private Set<Path> cached_paths = null;
 
     public Graph() {
     }
@@ -124,52 +125,36 @@ public class Graph {
         return infos.stream().map(i -> i.get_node().id).collect(Collectors.toList());
     }
 
-    private static Edge get_connecting_edge(Node first, Node second) {
+    public static Edge get_connecting_edge(Node first, Node second) {
         return first.edges.stream().filter(e -> e.get_second() == second).findFirst().orElse(null);
     }
 
-    // merges specified paths with every possible way according to edges in initial graph
-    private static Set<Path> possible_connections(Path path1, Path path2, Graph initial, PathEstimator estimator) {
-        Set<Path> result = new HashSet<>();
-        for (int i = 0; i < path1.edges.size(); ++i) {
-            for (int j = 0; j < path2.edges.size(); ++j) {
-                Node path1_break_node = path1.edges.get(i).second;
-                Node path2_break_node = path2.edges.get(i).second;
-                Node path1_break_image = initial.nodes.get(path1_break_node.old_id);
-                Node path2_break_image = initial.nodes.get(path2_break_node.old_id);
-                Edge bridge = get_connecting_edge(path1_break_image, path2_break_image);
-                if (bridge != null) {
-                    Path connected = Path.merge(path1, path2, i, j, bridge, estimator);
-                    result.add(connected);
-                }
-            }
-        }
-        return result;
-    }
-
-    private static <T extends Collection<Path>> T trim_paths(T paths) {
+    private static <T extends Collection<Path>> T trim_paths(T paths, PathEstimator estimator) {
         for (Path path : paths) {
-            path.used_ids.remove(path.edges.get(0).first.id);
+            path.used_ids.remove(path.edges.get(0).second.id);
             path.used_ids.remove(path.edges.get(path.edges.size() - 1).second.id);
-            path.edges.remove(0);
+            path.edges.subList(0, 2).clear();
+            Node first = path.edges.get(0).first;
+            path.edges.add(0, new Edge(null, first, 0));
             path.edges.remove(path.edges.size() - 1);
+            path.score = estimator.path_score(path);
         }
         return paths;
     }
 
-    private static Set<Path> connect_node_paths(Set<Path> node1_paths, Set<Path> node2_paths, Graph initial, PathEstimator estimator) {
+    private static Set<Path> connect_node_paths(Set<Path> node1_paths, Set<Path> node2_paths, PathEstimator estimator) {
         Set<Path> result = new HashSet<>();
         for (Path path1 : node1_paths) {
             for (Path path2 : node2_paths) {
-                Set<Path> possible_connections = possible_connections(path1, path2, initial, estimator);
-                result.addAll(possible_connections);
+                Path connected = estimator.merge_paths(path1, path2);
+                result.add(connected);
             }
         }
         return result;
     }
 
     private static Set<Path> sift_paths(Set<Path> all_paths, long max_paths) {
-        if (max_paths == Long.MAX_VALUE) {
+        if (all_paths.size() <= max_paths) {
             return all_paths;
         }
         return all_paths.stream().sorted(Comparator.comparingDouble(p -> -p.score)).limit(max_paths).
@@ -297,7 +282,7 @@ public class Graph {
         Graph new_graph = new Graph(new_nodes);
         Map<List<Integer>, Double> new_edges = deduce_component_edges(new_nodes, decomposition_info);
         for (Map.Entry<List<Integer>, Double> e : new_edges.entrySet()) {
-            new_graph.add_bidirectional_edge(new_nodes.get(e.getKey().get(0)), new_nodes.get(e.getKey().get(1)), e.getValue());
+            new_graph.add_edge(new_nodes.get(e.getKey().get(0)), new_nodes.get(e.getKey().get(1)), e.getValue());
         }
         return new_graph.hierarchical_decomposition(max_vertices_per_graph);
     }
@@ -308,7 +293,7 @@ public class Graph {
         List<TreeInfo> tree_info = mst.collect_tree_info();
 
         PriorityQueue<Edge> edge_queue = new PriorityQueue<>(Comparator.comparingDouble(e -> -e.weight));
-        edge_queue.addAll(mst.edges);
+        edge_queue.addAll(mst.edges.stream().filter(e -> e.first.id < e.second.id).collect(Collectors.toList()));
 
         TreeMap<Integer, Integer> component_sizes = new TreeMap<>();
         component_sizes.put(nodes.size(), 1);
@@ -322,16 +307,16 @@ public class Graph {
     private void add_source_sink() {
         Node source = new Node(nodes.size());
         Node sink = new Node(nodes.size() + 1);
-        nodes.forEach(n -> add_bidirectional_edge(n, source, 0));
-        nodes.forEach(n -> add_bidirectional_edge(n, sink, 0));
+        nodes.forEach(n -> add_edge(source, n, 0));
+        nodes.forEach(n -> add_edge(n, sink, 0));
         nodes.add(source);
         nodes.add(sink);
     }
 
     public void write_dot_representation(OutputStream output_stream) {
         PrintWriter writer = new PrintWriter(output_stream);
-        writer.println("graph {");
-        edges.forEach(e -> writer.format("%d -- %d%n", e.first.id, e.second.id));
+        writer.println("digraph {");
+        edges.forEach(e -> writer.format("%d -> %d%n", e.first.id, e.second.id));
         writer.println("}");
         writer.flush();
     }
@@ -344,6 +329,7 @@ public class Graph {
             Node next_vertex = initial.nodes.get(decomposed.edges.get(i).second.old_id);
             Edge connecting_edge = get_connecting_edge(previous_vertex, next_vertex);
             initial_edges.add(connecting_edge);
+            previous_vertex = next_vertex;
         }
         Set<Integer> used_ids = new HashSet<>();
         initial_edges.forEach(e -> used_ids.add(e.second.id));
@@ -354,31 +340,40 @@ public class Graph {
         return decomposed_paths.stream().map(p -> map_path(p, initial)).collect(Collectors.toCollection(HashSet::new));
     }
 
+    // O(log(V) * (V * (V + E) + T(merge)))
     public Set<Path> calculate_suboptimal_longest_path(PathEstimator estimator, int max_nodes_per_graph, long max_paths_per_node) {
         Graph decomposed = hierarchical_decomposition(max_nodes_per_graph);
         return decomposed.calculate_suboptimal_paths_helper(estimator, this, max_paths_per_node);
     }
 
-    private Set<Path> calculate_suboptimal_paths_helper(PathEstimator estimator, Graph initial, long max_paths_per_node) {
+    // O(log(V) * T(merge))
+    // initial should be decomposed graph
+    private Set<Path> calculate_suboptimal_paths_helper(PathEstimator estimator, Graph initial, long max_paths_per_graph) {
+        if (cached_paths != null) {
+            return cached_paths;
+        }
         add_source_sink();
         LongestPathInfo path_info = calculate_longest_paths(nodes.size() - 2, estimator).get(nodes.size() - 1);
-        Set<Path> current_level_graph_paths = trim_paths(path_info.paths);
+        Set<Path> current_level_graph_paths = trim_paths(path_info.paths, estimator);
         if (path_info.paths.iterator().next().edges.get(0).second.underlying_graph == null) {
-            return map_paths(current_level_graph_paths, initial);
+            Set<Path> mapped_paths = map_paths(current_level_graph_paths, initial);
+            cached_paths = sift_paths(mapped_paths, max_paths_per_graph);
+            return cached_paths;
         }
 
         Set<Path> all_underlying_path = new HashSet<>();
         for (Path path : current_level_graph_paths) {
             Set<Path> current_underlying_paths = path.edges.get(0).second.underlying_graph.
-                    calculate_suboptimal_paths_helper(estimator, initial, max_paths_per_node);
+                    calculate_suboptimal_paths_helper(estimator, initial, max_paths_per_graph);
             for (int i = 1; i < path.edges.size(); ++i) {
                 Set<Path> next_node_underlying_paths = path.edges.get(i).second.underlying_graph.
-                        calculate_suboptimal_paths_helper(estimator, initial, max_paths_per_node);
-                current_underlying_paths = connect_node_paths(current_underlying_paths, next_node_underlying_paths, initial, estimator);
+                        calculate_suboptimal_paths_helper(estimator, initial, max_paths_per_graph);
+                current_underlying_paths = connect_node_paths(current_underlying_paths, next_node_underlying_paths, estimator);
             }
             all_underlying_path.addAll(current_underlying_paths);
         }
-        return sift_paths(all_underlying_path, max_paths_per_node);
+        cached_paths = sift_paths(all_underlying_path, max_paths_per_graph);
+        return cached_paths;
     }
 
     // O*(V!)
@@ -397,11 +392,8 @@ public class Graph {
             List<LongestPathInfo> next_infos = infos.stream().map(LongestPathInfo::new).collect(Collectors.toList());
             for (Edge edge : all_edges) {
                 LongestPathInfo node1_previous_info = infos.get(edge.first.id);
-                LongestPathInfo node1_next_info = next_infos.get(edge.first.id);
-                LongestPathInfo node2_previous_info = infos.get(edge.second.id);
                 LongestPathInfo node2_next_info = next_infos.get(edge.second.id);
                 estimation_changed |= try_update_next(node1_previous_info, node2_next_info, edge, estimator);
-                estimation_changed |= try_update_next(node2_previous_info, node1_next_info, edge, estimator);
             }
             infos = next_infos;
         }
@@ -450,7 +442,7 @@ public class Graph {
         start.visited = true;
         component.add(start.node);
         for (Edge edge : start.node.edges) {
-            ComponentInfo next = all_info.get(edge.get_second(start.node).id);
+            ComponentInfo next = all_info.get(edge.get_second().id);
             if (!next.visited) {
                 collect_component(next, component, all_info);
             }
@@ -519,4 +511,21 @@ public class Graph {
 //            current_info.visited = true;
 //        }
 //        return nodes_info;
+//    }
+
+// merges specified paths with every possible way according to edges in initial graph
+//    private static Set<Path> possible_connections(Path path1, Path path2, PathEstimator estimator) {
+//        Set<Path> result = new HashSet<>();
+//        for (int i = 0; i < path1.edges.size(); ++i) {
+//            for (int j = 0; j < path2.edges.size(); ++j) {
+//                Node path1_break_node = path1.edges.get(i).second;
+//                Node path2_break_node = path2.edges.get(j).second;
+//                Edge bridge = get_connecting_edge(path1_break_node, path2_break_node);
+//                if (bridge != null) {
+//                    Path connected = Path.merge(path1, path2, i, j, bridge, estimator);
+//                    result.add(connected);
+//                }
+//            }
+//        }
+//        return result;
 //    }

@@ -25,6 +25,6 @@ public class Node {
 
     @Override
     public String toString() {
-        return String.format("id: %d", id);
+        return String.format("id: %d, old id: %d", id, old_id);
     }
 }

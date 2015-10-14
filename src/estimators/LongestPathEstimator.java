@@ -1,6 +1,8 @@
 package estimators;
 
 import core.Edge;
+import core.Graph;
+import core.Node;
 import core.Path;
 
 public class LongestPathEstimator implements PathEstimator {
@@ -17,6 +19,23 @@ public class LongestPathEstimator implements PathEstimator {
     @Override
     public double path_score(Path path) {
         return path.edges.size();
+    }
+
+    @Override
+    public Path merge_paths(Path path1, Path path2) {
+        for (int nodes_given = 0; nodes_given < path1.edges.size() + path2.edges.size(); ++nodes_given) {
+            for (int path1_given = nodes_given, path2_given = 0; path2_given <= nodes_given; --path1_given, ++path2_given) {
+                int path1_break_index = path1.edges.size() - 1 - path1_given;
+                int path2_break_index = path2.edges.size() - 1 - path2_given;
+                Node first = path1.edges.get(path1_break_index).second;
+                Node second = path2.edges.get(path2_break_index).second;
+                Edge bridge = Graph.get_connecting_edge(first, second);
+                if (bridge != null) {
+                    return Path.merge(path1, path2, path1_break_index, path2_break_index, bridge, this);
+                }
+            }
+        }
+        return null;
     }
 
     // TODO: implement reasonable logic

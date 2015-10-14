@@ -18,7 +18,7 @@ public final class Edge {
     @Override
     public int hashCode() {
         int result = 17;
-        result = 31 * result + first.hashCode();
+        result = 31 * result + (first == null ? 0 : first.hashCode());
         result = 31 * result + second.hashCode();
         result = 31 * result + double_hash_code(weight);
         return result;
@@ -44,8 +44,8 @@ public final class Edge {
     @Override
     public String toString() {
         if (first == null) {
-            return "void -> " + second.toString();
+            return "void -> " + second.id;
         }
-        return first.toString() + " -> " + second.toString();
+        return first.id + " -> " + second.id;
     }
 }
