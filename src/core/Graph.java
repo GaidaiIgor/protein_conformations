@@ -7,9 +7,7 @@ import nodeinfo.NodeInfo;
 import nodeinfo.TreeInfo;
 import utility.ApproximateComparator;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -111,10 +109,11 @@ public class Graph {
         add_edge(node2, node1, weight);
     }
 
-    public void add_edge(Node node1, Node node2, double weight) {
+    public Edge add_edge(Node node1, Node node2, double weight) {
         Edge new_edge = new Edge(node1, node2, weight);
         node1.edges.add(new_edge);
         edges.add(new_edge);
+        return new_edge;
     }
 
     private static <T extends NodeInfo> T get_corresponding_info(Node node, List<T> all_infos) {
@@ -137,17 +136,22 @@ public class Graph {
             Node first = path.edges.get(0).first;
             path.edges.add(0, new Edge(null, first, 0));
             path.edges.remove(path.edges.size() - 1);
+            path.total_nodes -= 2;
             path.score = estimator.path_score(path);
         }
         return paths;
     }
 
-    private static Set<Path> connect_node_paths(Set<Path> node1_paths, Set<Path> node2_paths, PathEstimator estimator) {
+    private static Set<Path> connect_component_paths(Set<Path> node1_paths, Set<Path> node2_paths, PathEstimator estimator) {
         Set<Path> result = new HashSet<>();
+        result.addAll(node1_paths);
+        result.addAll(node2_paths);
         for (Path path1 : node1_paths) {
             for (Path path2 : node2_paths) {
                 Path connected = estimator.merge_paths(path1, path2);
-                result.add(connected);
+                if (connected != null) {
+                    result.add(connected);
+                }
             }
         }
         return result;
@@ -161,8 +165,27 @@ public class Graph {
                 collect(Collectors.toCollection(HashSet::new));
     }
 
+    // connects components of this graph with edges of infinite weight
+    // returns list of added edges
+    private List<Edge> connect_components() {
+        List<Edge> result = new ArrayList<>();
+        List<ComponentInfo> component_infos = get_component_info();
+        Map<Integer, List<ComponentInfo>> component_groups = component_infos.stream().collect(Collectors.groupingBy(ci -> ci.component));
+        List<List<ComponentInfo>> groups = new ArrayList<>(component_groups.values());
+        for (int i = 0; i < component_groups.size() - 1; ++i) {
+            Node current_component_member = groups.get(i).get(0).node;
+            Node next_component_member = groups.get(i + 1).get(0).node;
+            Edge new_edge1 = add_edge(current_component_member, next_component_member, Double.POSITIVE_INFINITY);
+            Edge new_edge2 = add_edge(next_component_member, current_component_member, Double.POSITIVE_INFINITY);
+            result.add(new_edge1);
+            result.add(new_edge2);
+        }
+        return result;
+    }
+
     // O(E * log(V))
     public Graph minimal_spanning_tree() {
+        List<Edge> fictive = connect_components();
         List<Boolean> is_in_tree = new ArrayList<>(Collections.nCopies(nodes.size(), false));
         PriorityQueue<Edge> edge_queue = new PriorityQueue<>(Comparator.comparingDouble(e -> e.weight));
 
@@ -185,6 +208,7 @@ public class Graph {
             new_node.edges.stream().filter(e -> !is_in_tree.get(e.second.id)).forEach(edge_queue::add);
             nodes_left -= 1;
         }
+        remove_edges(fictive);
         return result;
     }
 
@@ -217,6 +241,10 @@ public class Graph {
         return result;
     }
 
+    public void remove_edges(Collection<Edge> edges) {
+        edges.forEach(this::remove_edge);
+    }
+
     public void remove_edge(Edge edge) {
         edge.first.edges.remove(edge);
         edges.remove(edge);
@@ -238,8 +266,7 @@ public class Graph {
         List<Boolean> is_selected = new ArrayList<>(Collections.nCopies(nodes.size(), false));
         node_ids.forEach(i -> is_selected.set(i, true));
 
-        List<Node> new_nodes = IntStream.range(0, node_ids.size()).
-                mapToObj(i -> new Node(i, nodes.get(node_ids.get(i)).underlying_graph, node_ids.get(i))).
+        List<Node> new_nodes = IntStream.range(0, node_ids.size()).mapToObj(i -> Node.fork_other(i, nodes.get(node_ids.get(i)))).
                 collect(Collectors.toList());
         Graph new_graph = new Graph(new_nodes);
         edges.stream().filter(e -> is_selected.get(e.first.id) && is_selected.get(e.second.id)).forEach(e -> new_graph.
@@ -265,6 +292,7 @@ public class Graph {
     }
 
     // O(V * (V + E) * log(V))
+    // Supports only connected graphs. If graph is disconnected then it will be made connected.
     public Graph hierarchical_decomposition(int max_vertices_per_graph) {
         if (max_vertices_per_graph <= 1) {
             throw new RuntimeException("Max vertices should be >= 2");
@@ -278,6 +306,7 @@ public class Graph {
         for (Map.Entry<Integer, List<ComponentInfo>> entry : components.entrySet()) {
             Graph subgraph = subgraph(get_ids(entry.getValue()));
             new_nodes.get(entry.getKey()).set_underlying_graph(subgraph);
+            new_nodes.get(entry.getKey()).size = subgraph.nodes.stream().mapToInt(n -> n.size).sum();
         }
         Graph new_graph = new Graph(new_nodes);
         Map<List<Integer>, Double> new_edges = deduce_component_edges(new_nodes, decomposition_info);
@@ -313,10 +342,21 @@ public class Graph {
         nodes.add(sink);
     }
 
+    public void write_dot_to_file(String filename) {
+        try {
+            FileOutputStream output = new FileOutputStream(filename);
+            write_dot_representation(output);
+            output.close();
+        }
+        catch (IOException exception) {
+            System.err.println(exception.getMessage());
+        }
+    }
+
     public void write_dot_representation(OutputStream output_stream) {
         PrintWriter writer = new PrintWriter(output_stream);
         writer.println("digraph {");
-        edges.forEach(e -> writer.format("%d -> %d%n", e.first.id, e.second.id));
+        edges.forEach(e -> writer.format("%d -> %d [weight=%.0f label=%.0f]%n", e.first.id, e.second.id, e.weight, e.weight));
         writer.println("}");
         writer.flush();
     }
@@ -333,7 +373,7 @@ public class Graph {
         }
         Set<Integer> used_ids = new HashSet<>();
         initial_edges.forEach(e -> used_ids.add(e.second.id));
-        return new Path(used_ids, initial_edges, decomposed.total_weight, decomposed.score);
+        return new Path(used_ids, initial_edges, decomposed);
     }
 
     private Set<Path> map_paths(Set<Path> decomposed_paths, Graph initial) {
@@ -343,6 +383,7 @@ public class Graph {
     // O(log(V) * (V * (V + E) + T(merge)))
     public Set<Path> calculate_suboptimal_longest_path(PathEstimator estimator, int max_nodes_per_graph, long max_paths_per_node) {
         Graph decomposed = hierarchical_decomposition(max_nodes_per_graph);
+        decomposed.write_dot_to_file("meta.dot");
         return decomposed.calculate_suboptimal_paths_helper(estimator, this, max_paths_per_node);
     }
 
@@ -353,7 +394,7 @@ public class Graph {
             return cached_paths;
         }
         add_source_sink();
-        LongestPathInfo path_info = calculate_longest_paths(nodes.size() - 2, estimator).get(nodes.size() - 1);
+        LongestPathInfo path_info = calculate_longest_paths(nodes.size() - 2, estimator, max_paths_per_graph).get(nodes.size() - 1);
         Set<Path> current_level_graph_paths = trim_paths(path_info.paths, estimator);
         if (path_info.paths.iterator().next().edges.get(0).second.underlying_graph == null) {
             Set<Path> mapped_paths = map_paths(current_level_graph_paths, initial);
@@ -368,7 +409,7 @@ public class Graph {
             for (int i = 1; i < path.edges.size(); ++i) {
                 Set<Path> next_node_underlying_paths = path.edges.get(i).second.underlying_graph.
                         calculate_suboptimal_paths_helper(estimator, initial, max_paths_per_graph);
-                current_underlying_paths = connect_node_paths(current_underlying_paths, next_node_underlying_paths, estimator);
+                current_underlying_paths = connect_component_paths(current_underlying_paths, next_node_underlying_paths, estimator);
             }
             all_underlying_path.addAll(current_underlying_paths);
         }
@@ -377,12 +418,12 @@ public class Graph {
     }
 
     // O*(V!)
-    public List<LongestPathInfo> calculate_longest_paths(int start_node_id, PathEstimator estimator) {
+    public List<LongestPathInfo> calculate_longest_paths(int start_node_id, PathEstimator estimator, long max_paths_per_node) {
         List<LongestPathInfo> infos = nodes.stream().map(LongestPathInfo::new).collect(Collectors.toList());
         LongestPathInfo start_node = infos.get(start_node_id);
         Path trivial_path = Path.get_trivial_path(nodes.get(start_node_id), estimator);
         start_node.paths.add(trivial_path);
-        start_node.best_path = trivial_path;
+//        start_node.best_path = trivial_path;
         List<Edge> all_edges = edges.stream().collect(Collectors.toList());
 
         boolean estimation_changed = true;
@@ -393,7 +434,7 @@ public class Graph {
             for (Edge edge : all_edges) {
                 LongestPathInfo node1_previous_info = infos.get(edge.first.id);
                 LongestPathInfo node2_next_info = next_infos.get(edge.second.id);
-                estimation_changed |= try_update_next(node1_previous_info, node2_next_info, edge, estimator);
+                estimation_changed |= try_update_next(node1_previous_info, node2_next_info, edge, estimator, max_paths_per_node);
             }
             infos = next_infos;
         }
@@ -403,50 +444,31 @@ public class Graph {
     // O*(V!)
     // Tries to extend every edges in previous using next as next vertex. Replace best edges in next if any of the obtained paths will be
     // better.
-    private boolean try_update_next(LongestPathInfo previous, LongestPathInfo next, Edge edge, PathEstimator estimator) {
-        List<Path> compatible_paths = previous.paths.stream().filter(p -> !p.used_ids.contains(next.node.id)).
+    private boolean try_update_next(LongestPathInfo previous, LongestPathInfo next, Edge edge, PathEstimator estimator, long max_paths) {
+        List<Path> extended_paths = previous.paths.stream().filter(p -> !p.used_ids.contains(next.node.id)).
                 map(p -> Path.merge(p, Path.get_trivial_path(next.node, estimator), p.edges.size() - 1, 0, edge, estimator)).
                 collect(Collectors.toList());
-        if (compatible_paths.isEmpty()) {
+        if (extended_paths.isEmpty()) {
             return false;
         }
-        Path best_path = compatible_paths.stream().max(Comparator.comparingDouble(p -> p.score)).get();
-        if (score_comparator.compare(best_path.score, next.best_path.score) == 1) {
-            next.best_path = best_path;
-            next.paths.clear();
-        }
-
-        List<Path> almost_equal = compatible_paths.stream().filter(p -> score_comparator.compare(p.score, next.best_path.score) == 0).
-                collect(Collectors.toList());
-        int size_before_update = next.paths.size();
-        next.paths.addAll(almost_equal);
-        return next.paths.size() > size_before_update;
+        next.paths.addAll(extended_paths);
+        next.paths = sift_paths(next.paths, max_paths);
+        return true;
+//        Path best_path = extended_paths.stream().max(Comparator.comparingDouble(p -> p.score)).get();
+//        if (score_comparator.compare(best_path.score, next.best_path.score) == 1) {
+//            next.best_path = best_path;
+//            next.paths.clear();
+//        }
+//
+//        List<Path> almost_equal = extended_paths.stream().filter(p -> score_comparator.compare(p.score, next.best_path.score) == 0).
+//                collect(Collectors.toList());
+//        int size_before_update = next.paths.size();
+//        next.paths.addAll(almost_equal);
+//        return next.paths.size() > size_before_update;
     }
 
     public List<Node> get_nodes() {
         return nodes;
-    }
-
-    public List<List<Node>> get_components() {
-        List<ComponentInfo> dfs_infos = nodes.stream().map(ComponentInfo::new).collect(Collectors.toList());
-        List<List<Node>> result = new ArrayList<>();
-        dfs_infos.stream().filter(info -> !info.visited).forEach(info -> {
-            List<Node> next_component = new ArrayList<>();
-            collect_component(info, next_component, dfs_infos);
-            result.add(next_component);
-        });
-        return result;
-    }
-
-    private void collect_component(ComponentInfo start, List<Node> component, List<ComponentInfo> all_info) {
-        start.visited = true;
-        component.add(start.node);
-        for (Edge edge : start.node.edges) {
-            ComponentInfo next = all_info.get(edge.get_second().id);
-            if (!next.visited) {
-                collect_component(next, component, all_info);
-            }
-        }
     }
 }
 

@@ -13,19 +13,20 @@ public class FileFormatConverter {
         Scanner in = new Scanner(pseudo_csv);
         in.nextLine();
         List<Edge> edges = new ArrayList<>();
-        int max_id = 0;
+        Map<Integer, Integer> id_map = new HashMap<>();
         while (in.hasNext()) {
             String next_line = in.nextLine();
             String[] tokens = next_line.split("(,|_)");
             int node1_id = Integer.parseInt(tokens[1]);
             int node2_id = Integer.parseInt(tokens[2]);
-            max_id = Collections.max(Arrays.asList(node1_id, node2_id, max_id));
+            id_map.putIfAbsent(node1_id, id_map.size());
+            id_map.putIfAbsent(node2_id, id_map.size());
             double edge_weight = Double.parseDouble(tokens[4]);
-            edges.add(new Edge(new Node(node1_id), new Node(node2_id), edge_weight));
+            edges.add(new Edge(new Node(id_map.get(node1_id)), new Node(id_map.get(node2_id)), edge_weight));
         }
 
         PrintWriter out = new PrintWriter(graph_description);
-        out.println(max_id + 1);
+        out.println(id_map.size());
         out.println(edges.size());
         edges.forEach(e -> out.format("%d %d %f%n", e.first.id, e.second.id, e.weight));
         out.flush();

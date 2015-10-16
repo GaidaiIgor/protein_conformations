@@ -14,26 +14,29 @@ public class Path {
     public List<Edge> edges = new ArrayList<>();
     public double total_weight = 0;
     public double score = 0;
+    public int total_nodes = 0;
 
     public Path() {
     }
 
-    public Path(Set<Integer> used_ids, List<Edge> edges, double total_weight, double score) {
+    public Path(Set<Integer> used_ids, List<Edge> edges, Path other) {
         this.used_ids = used_ids;
         this.edges = edges;
-        this.total_weight = total_weight;
-        this.score = score;
+        total_weight = other.total_weight;
+        score = other.score;
+        total_nodes = other.total_nodes;
     }
 
     public static Path get_trivial_path(Node single_node, PathEstimator estimator) {
         Path new_path = new Path();
         new_path.used_ids.add(single_node.id);
         new_path.edges.add(new Edge(null, single_node, 0));
+        new_path.total_nodes = single_node.size;
         new_path.score = estimator.path_score(new_path);
         return new_path;
     }
 
-    // copy edges by reference
+    // fork_other edges by reference
     public static Path merge(Path path1, Path path2, int path1_break_index, int path2_break_index, Edge bridge, PathEstimator estimator) {
         Path new_path = new Path();
 
@@ -44,6 +47,7 @@ public class Path {
         new_path.edges.forEach(e -> new_path.used_ids.add(e.second.id));
 
         new_path.total_weight = new_path.edges.stream().collect(Collectors.summingDouble(e -> e.weight));
+        new_path.total_nodes = new_path.edges.stream().mapToInt(e -> e.second.size).sum();
         new_path.score = estimator.path_score(new_path);
         return new_path;
     }
@@ -54,6 +58,7 @@ public class Path {
         copy.used_ids.addAll(used_ids);
         copy.edges.addAll(edges);
         copy.total_weight = total_weight;
+        copy.total_nodes = total_nodes;
         copy.score = score;
         return copy;
     }
@@ -77,5 +82,14 @@ public class Path {
         }
         Path other = (Path) object;
         return edges.size() == other.edges.size() && IntStream.range(0, edges.size()).mapToObj(i -> edges.get(i).equals(other.edges.get(i))).allMatch(b -> b);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("void");
+        edges.forEach(e -> builder.append(" -> ").append(e.second.id));
+        builder.append("; total nodes: ").append(total_nodes);
+        return builder.toString();
     }
 }

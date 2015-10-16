@@ -20,4 +20,9 @@ public class ComponentInfo implements NodeInfo {
     public Node get_node() {
         return node;
     }
+
+    @Override
+    public String toString() {
+        return node.toString() + ", component: " + component;
+    }
 }
