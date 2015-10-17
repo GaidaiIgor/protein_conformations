@@ -17,7 +17,7 @@ public class ComponentInfo implements NodeInfo {
         component = other.component;
     }
 
-    public Node get_node() {
+    public Node getNode() {
         return node;
     }
 

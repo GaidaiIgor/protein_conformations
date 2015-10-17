@@ -1,9 +1,9 @@
 package core;
 
 public final class Edge {
-    public final Node first;
-    public final Node second;
-    public final double weight;
+    private final Node first;
+    private final Node second;
+    private final double weight;
 
     public Edge(Node first, Node second, double weight) {
         this.first = first;
@@ -11,7 +11,15 @@ public final class Edge {
         this.weight = weight;
     }
 
-    public Node get_second() {
+    public Node getFirst() {
+        return first;
+    }
+
+    public double getWeight() {
+        return weight;
+    }
+
+    public Node getSecond() {
         return second;
     }
 
@@ -44,8 +52,8 @@ public final class Edge {
     @Override
     public String toString() {
         if (first == null) {
-            return "void -> " + second.id;
+            return "void -> " + second.getId();
         }
-        return first.id + " -> " + second.id;
+        return first.getId() + " -> " + second.getId();
     }
 }

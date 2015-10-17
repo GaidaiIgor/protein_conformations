@@ -10,57 +10,79 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class Path {
-    public Set<Integer> used_ids = new HashSet<>();
-    public List<Edge> edges = new ArrayList<>();
-    public double total_weight = 0;
-    public double score = 0;
-    public int total_nodes = 0;
+    private final Set<Integer> usedIds;
+    private final List<Edge> edges;
+    private double totalWeight = 0;
+    private double score = 0;
+    private int totalNodes = 0;
 
     public Path() {
+        this(new HashSet<>(), new ArrayList<>());
     }
 
-    public Path(Set<Integer> used_ids, List<Edge> edges, Path other) {
-        this.used_ids = used_ids;
+    public Path(Set<Integer> usedIds, List<Edge> edges) {
+        this.usedIds = usedIds;
         this.edges = edges;
-        total_weight = other.total_weight;
-        score = other.score;
-        total_nodes = other.total_nodes;
     }
 
-    public static Path get_trivial_path(Node single_node, PathEstimator estimator) {
-        Path new_path = new Path();
-        new_path.used_ids.add(single_node.id);
-        new_path.edges.add(new Edge(null, single_node, 0));
-        new_path.total_nodes = single_node.size;
-        new_path.score = estimator.path_score(new_path);
-        return new_path;
+    public Path(Set<Integer> usedIds, List<Edge> edges, Path other) {
+        this(usedIds, edges);
+        totalWeight = other.totalWeight;
+        score = other.score;
+        totalNodes = other.totalNodes;
+    }
+
+    public static Path getTrivialPath(Node singleNode, PathEstimator estimator) {
+        Path newPath = new Path();
+        newPath.usedIds.add(singleNode.getId());
+        newPath.edges.add(new Edge(null, singleNode, 0));
+        newPath.totalNodes = singleNode.getSize();
+        newPath.score = estimator.pathScore(newPath);
+        return newPath;
     }
 
     // fork_other edges by reference
-    public static Path merge(Path path1, Path path2, int path1_break_index, int path2_break_index, Edge bridge, PathEstimator estimator) {
-        Path new_path = new Path();
+    public static Path merge(Path path1, Path path2, int path1BreakIndex, int path2BreakIndex, Edge bridge, PathEstimator estimator) {
+        Path newPath = new Path();
 
-        new_path.edges.addAll(path1.edges.subList(0, path1_break_index + 1));
-        new_path.edges.add(bridge);
-        new_path.edges.addAll(path2.edges.subList(path2_break_index + 1, path2.edges.size()));
+        newPath.edges.addAll(path1.edges.subList(0, path1BreakIndex + 1));
+        newPath.edges.add(bridge);
+        newPath.edges.addAll(path2.edges.subList(path2BreakIndex + 1, path2.edges.size()));
 
-        new_path.edges.forEach(e -> new_path.used_ids.add(e.second.id));
+        newPath.edges.forEach(e -> newPath.usedIds.add(e.getSecond().getId()));
 
-        new_path.total_weight = new_path.edges.stream().collect(Collectors.summingDouble(e -> e.weight));
-        new_path.total_nodes = new_path.edges.stream().mapToInt(e -> e.second.size).sum();
-        new_path.score = estimator.path_score(new_path);
-        return new_path;
+        newPath.totalWeight = newPath.edges.stream().collect(Collectors.summingDouble(Edge::getWeight));
+        newPath.totalNodes = newPath.edges.stream().mapToInt(e -> e.getSecond().getSize()).sum();
+        newPath.score = estimator.pathScore(newPath);
+        return newPath;
     }
 
-    // edges are copied by reference
-    public Path copy() {
-        Path copy = new Path();
-        copy.used_ids.addAll(used_ids);
-        copy.edges.addAll(edges);
-        copy.total_weight = total_weight;
-        copy.total_nodes = total_nodes;
-        copy.score = score;
-        return copy;
+    public Set<Integer> getUsedIds() {
+        return usedIds;
+    }
+
+    public List<Edge> getEdges() {
+        return edges;
+    }
+
+    public double getTotalWeight() {
+        return totalWeight;
+    }
+
+    public double getScore() {
+        return score;
+    }
+
+    public void setScore(double score) {
+        this.score = score;
+    }
+
+    public int getTotalNodes() {
+        return totalNodes;
+    }
+
+    public void setTotalNodes(int totalNodes) {
+        this.totalNodes = totalNodes;
     }
 
     @Override
@@ -88,8 +110,9 @@ public class Path {
     public String toString() {
         StringBuilder builder = new StringBuilder();
         builder.append("void");
-        edges.forEach(e -> builder.append(" -> ").append(e.second.id));
-        builder.append("; total nodes: ").append(total_nodes);
+        edges.forEach(e -> builder.append(" -> ").append(e.getSecond().getId()));
+        builder.append("; total nodes: ").append(totalNodes);
+        builder.append(String.format("; total weight: %.0f", totalWeight));
         return builder.toString();
     }
 }

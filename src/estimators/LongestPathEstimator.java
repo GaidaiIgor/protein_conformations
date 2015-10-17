@@ -5,34 +5,31 @@ import core.Graph;
 import core.Node;
 import core.Path;
 
-public class LongestPathEstimator implements PathEstimator {
-    // TODO: probably implement better logic
-//    @Override
-//    public double path_connection_score(Path path1, Path path2, int path1_node_index, int path2_node_index, Edge edge) {
-//        if (!is_correct(path1, path2, path1_node_index, path2_node_index, edge)) {
-//            return 0;
-//        }
-//        return path1_node_index + 1 + path2.edges.size() - path2_node_index;
-////        return Math.pow(current.edges.size() + 1, 2) * 100000000 / (current.total_weight + edge_weight);
-//    }
+import java.util.Comparator;
 
+public class LongestPathEstimator implements PathEstimator {
     @Override
-    public double path_score(Path path) {
-        return path.total_nodes;
+    public int compare(Path path1, Path path2) {
+        return Comparator.<Path>comparingInt(p -> -p.getTotalNodes()).thenComparing(Path::getTotalWeight).compare(path1, path2);
     }
 
     @Override
-    public Path merge_paths(Path path1, Path path2) {
-        for (int nodes_given = 0; nodes_given < path1.edges.size() + path2.edges.size() - 2; ++nodes_given) {
-            int path1_given = Integer.min(nodes_given, path1.edges.size() - 1);
+    public double pathScore(Path path) {
+        return path.getTotalNodes();
+    }
+
+    @Override
+    public Path mergePaths(Path path1, Path path2) {
+        for (int nodes_given = 0; nodes_given < path1.getEdges().size() + path2.getEdges().size() - 2; ++nodes_given) {
+            int path1_given = Integer.min(nodes_given, path1.getEdges().size() - 1);
             int path2_given = nodes_given - path1_given;
-            while (path2_given <= Integer.min(nodes_given, path2.edges.size() - 1)) {
-                int path1_break_index = path1.edges.size() - 1 - path1_given;
+            while (path2_given <= Integer.min(nodes_given, path2.getEdges().size() - 1)) {
+                int path1_break_index = path1.getEdges().size() - 1 - path1_given;
                 //noinspection UnnecessaryLocalVariable
                 int path2_break_index = path2_given;
-                Node first = path1.edges.get(path1_break_index).second;
-                Node second = path2.edges.get(path2_break_index).second;
-                Edge bridge = Graph.get_connecting_edge(first, second);
+                Node first = path1.getEdges().get(path1_break_index).getSecond();
+                Node second = path2.getEdges().get(path2_break_index).getSecond();
+                Edge bridge = Graph.getConnectingEdge(first, second);
                 if (bridge != null) {
                     return Path.merge(path1, path2, path1_break_index, path2_break_index, bridge, this);
                 }

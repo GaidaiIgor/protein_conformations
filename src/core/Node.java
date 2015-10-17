@@ -1,39 +1,64 @@
 package core;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-public class Node {
-    public int id;
-    public List<Edge> edges = new ArrayList<>();
-    public Graph underlying_graph = null;
-    public int size = 1;
-    int old_id = -1;
+public final class Node {
+    private final int id;
+    private final List<Edge> edges = new ArrayList<>();
+    private final Graph underlyingGraph;
+    private final int oldId;
+    private final Set<Integer> adjacentMetaNodes = new HashSet<>();
 
     public Node(int id) {
+        this(id, null, -1);
+    }
+
+    public Node(int id, Graph underlyingGraph, int oldId) {
         this.id = id;
+        this.underlyingGraph = underlyingGraph;
+        this.oldId = oldId;
     }
 
-    public Node(int id, Graph underlying_graph, int old_id) {
-        this.id = id;
-        this.underlying_graph = underlying_graph;
-        this.old_id = old_id;
+//    public void setUnderlyingGraph(Graph value) {
+//        underlyingGraph = value;
+//    }
+
+    public static Node forkOther(int id, Node other) {
+        return new Node(id, other.underlyingGraph, other.id);
     }
 
-    public static Node fork_other(int id, Node other) {
-        Node new_node = new Node(id);
-        new_node.underlying_graph = other.underlying_graph;
-        new_node.old_id = other.id;
-        new_node.size = other.size;
-        return new_node;
+    public Graph getUnderlyingGraph() {
+        return underlyingGraph;
     }
 
-    public void set_underlying_graph(Graph value) {
-        underlying_graph = value;
+    public int getId() {
+        return id;
+    }
+
+    public List<Edge> getEdges() {
+        return edges;
+    }
+
+    public int getOldId() {
+        return oldId;
+    }
+
+    public Set<Integer> getAdjacentMetaNodes() {
+        return adjacentMetaNodes;
     }
 
     @Override
     public String toString() {
-        return String.format("id: %d, old id: %d, size: %d", id, old_id, size);
+        return String.format("id: %d, old id: %d, size: %d", id, oldId, getSize());
+    }
+
+    public int getSize() {
+        if (underlyingGraph == null) {
+            return 1;
+        }
+        return underlyingGraph.getTotalSize();
     }
 }
