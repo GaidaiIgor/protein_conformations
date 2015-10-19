@@ -1,30 +1,26 @@
 package core;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public final class Node {
     private final int id;
     private final List<Edge> edges = new ArrayList<>();
     private final Graph underlyingGraph;
     private final int oldId;
-    private final Set<Integer> adjacentMetaNodes = new HashSet<>();
+//    private Node parent;
+//    private final Set<Integer> adjacentMetaNodes = new HashSet<>();
 
     public Node(int id) {
-        this(id, null, -1);
+        this(id, null, id);
     }
 
     public Node(int id, Graph underlyingGraph, int oldId) {
         this.id = id;
         this.underlyingGraph = underlyingGraph;
         this.oldId = oldId;
+//        this.parent = parent;
     }
-
-//    public void setUnderlyingGraph(Graph value) {
-//        underlyingGraph = value;
-//    }
 
     public static Node forkOther(int id, Node other) {
         return new Node(id, other.underlyingGraph, other.id);
@@ -46,9 +42,16 @@ public final class Node {
         return oldId;
     }
 
-    public Set<Integer> getAdjacentMetaNodes() {
-        return adjacentMetaNodes;
-    }
+//    public Node getParent() {
+//        return parent;
+//    }
+
+//    public void setParent(Node parent) {
+//        this.parent = parent;
+//    }
+    //    public Set<Integer> getAdjacentMetaNodes() {
+//        return adjacentMetaNodes;
+//    }
 
     @Override
     public String toString() {

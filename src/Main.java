@@ -5,11 +5,28 @@ import estimators.PathEstimator;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
 class Main {
+    public static <T extends Collection<Integer>> T test(T collection) {
+        T another;
+        try {
+            Class<? extends Collection> collectionClass = collection.getClass();
+            Class w = Class.forName("java.util.ArrayList");
+            ArrayList r = (ArrayList) w.newInstance();
+            another = (T) collectionClass.newInstance();
+        }
+        catch (Exception e) {
+            return null;
+        }
+        another.add(1);
+        return another;
+    }
+
     public static void main(String[] args) {
+
         try {
             FileInputStream pseudo_csv = new FileInputStream("calmodulin_best_paths.csv");
             PipedOutputStream convert_stream = new PipedOutputStream();
