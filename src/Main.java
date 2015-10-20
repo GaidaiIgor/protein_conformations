@@ -4,27 +4,9 @@ import estimators.LongestPathEstimator;
 import estimators.PathEstimator;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 
 class Main {
-    public static <T extends Collection<Integer>> T test(T collection) {
-        T another;
-        try {
-            Class<? extends Collection> collectionClass = collection.getClass();
-            Class w = Class.forName("java.util.ArrayList");
-            ArrayList r = (ArrayList) w.newInstance();
-            another = (T) collectionClass.newInstance();
-        }
-        catch (Exception e) {
-            return null;
-        }
-        another.add(1);
-        return another;
-    }
-
     public static void main(String[] args) {
 
         try {
@@ -42,12 +24,12 @@ class Main {
             graph.writeDotRepresentation(graph_dot);
             graph_dot.close();
 
-            int max_nodes_per_graph = 10; // > 1
-            long max_paths_per_node = 100;
+            int maxNodesPerGraph = 10; // > 1
+            long maxPathsPerBucket = 10;
             PathEstimator estimator = new LongestPathEstimator();
 //            FileInputStream input = new FileInputStream("input");
 //            Graph graph = Graph.getFromInputStream(input);
-            Set<Path> longest = graph.calculateSuboptimalLongestPath(estimator, max_nodes_per_graph, max_paths_per_node);
+            Set<Path> longest = graph.calculateSuboptimalLongestPath(estimator, maxNodesPerGraph, maxPathsPerBucket);
             System.out.println(longest.size());
             Path best = longest.stream().max(estimator).get();
             System.out.println(best.getEdges().size());
@@ -61,14 +43,6 @@ class Main {
         }
         catch (IOException exception) {
             System.err.println(exception.getMessage());
-        }
-    }
-
-    public static class Test<T> {
-        public List<T> list = new ArrayList<>();
-
-        public <E extends T> void add(E elem) {
-            list.add(elem);
         }
     }
 }

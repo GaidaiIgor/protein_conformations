@@ -20,7 +20,7 @@ public class LongestPathEstimator implements PathEstimator {
 
     @Override
     public Path mergePaths(Path path1, Path path2) {
-        for (int nodes_given = 0; nodes_given < path1.getEdges().size() + path2.getEdges().size() - 2; ++nodes_given) {
+        for (int nodes_given = 0; nodes_given <= path1.getEdges().size() + path2.getEdges().size() - 2; ++nodes_given) {
             int path1_given = Integer.min(nodes_given, path1.getEdges().size() - 1);
             int path2_given = nodes_given - path1_given;
             while (path2_given <= Integer.min(nodes_given, path2.getEdges().size() - 1)) {

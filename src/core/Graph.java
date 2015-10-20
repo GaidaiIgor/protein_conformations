@@ -8,6 +8,7 @@ import nodeinfo.TreeInfo;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -137,67 +138,88 @@ public class Graph {
 
     private static Set<Path> connectComponentPaths(Set<Path> node1Paths, Set<Path> node2Paths, PathEstimator estimator) {
         Set<Path> result = new HashSet<>();
-        result.addAll(node1Paths);
-        result.addAll(node2Paths);
         for (Path path1 : node1Paths) {
             for (Path path2 : node2Paths) {
                 Path connected = estimator.mergePaths(path1, path2);
-                if (connected != null) {
-                    result.add(connected);
-                    if (connected.getTotalNodes() > 11) {
-                        System.out.println(connected);
-                    }
-                }
+                result.add(connected);
             }
         }
         return result;
     }
 
-    private static <E extends Path, T extends Collection<E>> T siftPaths(T allPaths, long maxPaths, PathEstimator estimator) {
+    private static <E extends Path, T extends Collection<E>> T siftPaths(T allPaths, long maxPaths, PathEstimator estimator,
+                                                                         Supplier<T> tSupplier) {
         if (allPaths.size() <= maxPaths) {
             return allPaths;
         }
-        @SuppressWarnings("unchecked")
-        Class<T> collectionClass = (Class<T>) allPaths.getClass();
-        return allPaths.stream().sorted(estimator).limit(maxPaths).collect(Collectors.toCollection(() -> getInstance(collectionClass)));
+        return allPaths.stream().sorted(estimator).limit(maxPaths).collect(Collectors.toCollection(tSupplier));
     }
 
-    private static <T> T getInstance(Class<T> tClass) {
-        T result;
-        try {
-            result = tClass.newInstance();
-        }
-        catch (Exception e) {
-            throw new RuntimeException("Non instantiable class: " + tClass.toString());
-        }
-        return result;
+    private static Set<Integer> neighbourComponents(Node node, List<Integer> components) {
+        //        neighbours.remove(components.get(node.getId()));
+        return node.getEdges().stream().map(e -> components.get(e.getSecond().getId())).collect(Collectors.toSet());
     }
 
     private static <E extends Path, T extends Collection<E>>
-    void assignPath(E path, Map<Integer, T> pathSorter, int nodeIndex, List<Integer> nodeAddresses, Class<T> collectionClass) {
-        Node currentNode = path.getEdges().get(nodeIndex).getSecond();
-        for (Edge edge : currentNode.getEdges()) {
-            Node adjacent = edge.getSecond();
-            Integer currentParentNodeId = nodeAddresses.get(currentNode.getId());
-            Integer adjacentParentNodeId = nodeAddresses.get(adjacent.getId());
-            if (!currentParentNodeId.equals(adjacentParentNodeId)) {
-                pathSorter.putIfAbsent(adjacentParentNodeId, getInstance(collectionClass));
-                result.get(adjacentParentNodeId)
+    void assignPath(E path, List<Integer> components, Map<Integer, Map<Integer, T>> sorter, Supplier<T> tSupplier) {
+        List<Edge> pathEdges = path.getEdges();
+        Node first = pathEdges.get(0).getSecond();
+        Node last = pathEdges.get(pathEdges.size() - 1).getSecond();
+        Set<Integer> leftNeighbours = neighbourComponents(first, components);
+        Set<Integer> rightNeighbours = neighbourComponents(last, components);
+        for (Integer leftId : leftNeighbours) {
+            for (Integer rightId : rightNeighbours) {
+                sorter.putIfAbsent(leftId, new HashMap<>());
+                sorter.get(leftId).putIfAbsent(rightId, tSupplier.get());
+                sorter.get(leftId).get(rightId).add(path);
             }
         }
     }
 
-    private static <E extends Path, T extends Collection<E>>
-    Map<Integer, Map<Integer, T>> separatePaths(T paths, List<List<Integer>> nodesAddresses, int graphLevel, int maxPathsPerBucket) {
-
-        Map<Integer, Map<Integer, T>> result = new HashMap<>();
-        Map<Integer, T> left_paths = new HashMap<>();
-        Map<Integer, T> right_paths = new HashMap<>();
-        List<Integer> currentLevelAddresses = nodesAddresses.stream().map(list -> list.get(graphLevel - 1)).collect(Collectors.toList());
-        for (Path path : paths) {
-
-            Integer firstNodeComponent =
+    private static <E extends Path, T extends Collection<E>, R extends Collection<E>>
+    Map<Integer, Map<Integer, R>> separatePaths(T paths, Supplier<R> newInstanceSupplier, List<Integer> nodesAddresses,
+                                                long maxPathsPerBucket, PathEstimator estimator) {
+        Map<Integer, Map<Integer, R>> result = new HashMap<>();
+        for (E path : paths) {
+            assignPath(path, nodesAddresses, result, newInstanceSupplier);
         }
+        for (Integer leftId : result.keySet()) {
+            for (Integer rightId : result.get(leftId).keySet()) {
+                R currentBucket = result.get(leftId).get(rightId);
+                result.get(leftId).put(rightId, siftPaths(currentBucket, maxPathsPerBucket, estimator, newInstanceSupplier));
+            }
+        }
+        return result;
+    }
+
+    public static Edge getConnectingEdge(Node first, Node second) {
+        return first.getEdges().stream().filter(e -> e.getSecond() == second).findFirst().orElse(null);
+    }
+
+    private static Set<Path> getPathsEndingAt(Integer componentId, Map<Integer, Map<Integer, Set<Path>>> allPaths) {
+        Set<Path> result = new HashSet<>();
+        for (Map<Integer, Set<Path>> innerMap : allPaths.values()) {
+            Set<Path> current = innerMap.get(componentId);
+            if (current != null) {
+                result.addAll(current);
+            }
+        }
+        return result.size() == 0 ? null : result;
+    }
+
+    private static Set<Path> getPathsStartingAt(Integer componentId, Map<Integer, Map<Integer, Set<Path>>> allPaths) {
+        Set<Path> result = new HashSet<>();
+        Map<Integer, Set<Path>> correctMap = allPaths.get(componentId);
+        if (correctMap == null) {
+            return null;
+        }
+        correctMap.values().forEach(result::addAll);
+        return result;
+    }
+
+    private static Set<Path> getAllPaths(Map<Integer, Map<Integer, Set<Path>>> allPaths) {
+        Set<Path> result = new HashSet<>();
+        allPaths.values().forEach(m -> m.values().forEach(result::addAll));
         return result;
     }
 
@@ -291,6 +313,10 @@ public class Graph {
         edges.remove(edge);
     }
 
+//    private void setParentNode(Node parent) {
+//        nodes.forEach(n -> n.setParent(parent));
+//    }
+
     public void removeBidirectionalEdge(Edge edge) {
         Edge reverse = getConnectingEdge(edge.getSecond(), edge.getFirst());
         removeEdge(edge);
@@ -333,10 +359,6 @@ public class Graph {
         return result;
     }
 
-    private void setParentNode(Node parent) {
-        nodes.forEach(n -> n.setParent(parent));
-    }
-
     // O(V * (V + E) * log(V))
     // Supports only connected graphs. If graph is disconnected then it will be made connected.
     public Graph hierarchicalDecomposition(int maxVerticesPerGraph) {
@@ -351,8 +373,8 @@ public class Graph {
         List<Node> newNodes = new ArrayList<>(Collections.nCopies(components.size(), new Node(0)));
         for (Map.Entry<Integer, List<ComponentInfo>> entry : components.entrySet()) {
             Graph subgraph = subgraph(getIds(entry.getValue()));
-            Node parent = new Node(entry.getKey(), subgraph, -1, null);
-            subgraph.setParentNode(parent);
+            Node parent = new Node(entry.getKey(), subgraph, -1);
+//            subgraph.setParentNode(parent);
             newNodes.set(entry.getKey(), parent);
         }
         Graph newGraph = new Graph(newNodes);
@@ -429,10 +451,6 @@ public class Graph {
         return new Path(usedIds, initialEdges, decomposed);
     }
 
-    public static Edge getConnectingEdge(Node first, Node second) {
-        return first.getEdges().stream().filter(e -> e.getSecond() == second).findFirst().orElse(null);
-    }
-
     private void writeHierarchy(List<String> parentIds) {
         String name = "graph" + String.join("_", parentIds) + ".dot";
         writeAsDotToFile(name);
@@ -460,51 +478,92 @@ public class Graph {
 
     private List<List<Integer>> nodeComponentAddress() {
         List<List<Integer>> result = new ArrayList<>(Collections.nCopies(getTotalSize(), null));
-        setComponentAddress(result, new ArrayList<>());
+        List<Integer> currentAddress = new ArrayList<>(Collections.singletonList(0));
+        setComponentAddress(result, currentAddress);
         return result;
     }
 
     // O(log(V) * (V * (V + E) + T(merge)))
-    public Set<Path> calculateSuboptimalLongestPath(PathEstimator estimator, int maxNodesPerGraph, long maxPathsPerNode) {
+    public Set<Path> calculateSuboptimalLongestPath(PathEstimator estimator, int maxNodesPerGraph, long maxPathsPerBucket) {
         Graph decomposed = hierarchicalDecomposition(maxNodesPerGraph);
         List<List<Integer>> componentAddresses = decomposed.nodeComponentAddress();
 //        decomposed.writeHierarchy(new ArrayList<>());
 //        writeAsDotToFile("initial.dot");
-//        return decomposed.calculateSuboptimalPathsHelper(estimator, this, maxPathsPerNode, 0);
-        return null;
+        Map<Integer, Map<Integer, Set<Path>>> result =
+                decomposed.calculateSuboptimalPathsHelper(estimator, this, maxPathsPerBucket, 0, componentAddresses);
+        return result.get(0).get(0);
+    }
+
+    private List<Integer> currentLevelAddresses(List<List<Integer>> componentAddresses, int graphLevel) {
+        return componentAddresses.stream().map(list -> list.get(graphLevel)).collect(Collectors.toList());
     }
 
     // O(log(V) * T(merge))
     // initial should be decomposed graph
-    private Map<Integer, Map<Integer, Set<Path>>> calculateSuboptimalPathsHelper(PathEstimator estimator, Graph initial,
-                                                                                 long maxPathsPerGraph, int graphLevel,
-                                                                                 List<List<Integer>> componentAddress) {
-//        if (cachedPaths != null) {
-//            return cachedPaths;
-//        }
-//        addSourceSink();
-//        LongestPathInfo pathInfo = calculateLongestPaths(nodes.size() - 2, estimator).get(nodes.size() - 1);
-//        Set<Path> currentLevelGraphPaths = trimPaths(pathInfo.allPaths, estimator);
-//        if (pathInfo.allPaths.iterator().next().getEdges().get(0).getSecond().getUnderlyingGraph() == null) {
-//            Set<Path> mapped = mapPaths(currentLevelGraphPaths, initial);
-//            cachedPaths =
-//            return cachedPaths;
-//        }
-//
-//        Set<Path> allUnderlyingPath = new HashSet<>();
-//        for (Path path : currentLevelGraphPaths) {
-//            Set<Path> currentUnderlyingPaths = path.getEdges().get(0).getSecond().getUnderlyingGraph().
-//                    calculateSuboptimalPathsHelper(estimator, initial, maxPathsPerGraph);
-//            for (int i = 1; i < path.getEdges().size(); ++i) {
-//                Set<Path> nextNodeUnderlyingPaths = path.getEdges().get(i).getSecond().getUnderlyingGraph().
-//                        calculateSuboptimalPathsHelper(estimator, initial, maxPathsPerGraph);
-//                currentUnderlyingPaths = connectComponentPaths(currentUnderlyingPaths, nextNodeUnderlyingPaths, estimator);
-//            }
-//            allUnderlyingPath.addAll(currentUnderlyingPaths);
-//        }
-//        cachedPaths = siftPaths(allUnderlyingPath, maxPathsPerGraph, estimator);
-//        return cachedPaths;
-        return null;
+    private Map<Integer, Map<Integer, Set<Path>>>
+    calculateSuboptimalPathsHelper(PathEstimator estimator, Graph initial, long maxPathsPerBucket, int graphLevel,
+                                   List<List<Integer>> componentAddress) {
+        if (cachedPaths != null) {
+            return cachedPaths;
+        }
+        addSourceSink();
+        LongestPathInfo pathInfo = calculateLongestPaths(nodes.size() - 2, estimator).get(nodes.size() - 1);
+        Set<Path> currentLevelGraphPaths = trimPaths(pathInfo.allPaths, estimator);
+        if (pathInfo.allPaths.iterator().next().getEdges().get(0).getSecond().getUnderlyingGraph() == null) {
+            Set<Path> mapped = mapPaths(currentLevelGraphPaths, initial);
+            List<Integer> currentLevelAddresses = currentLevelAddresses(componentAddress, graphLevel);
+            cachedPaths = separatePaths(mapped, HashSet::new, currentLevelAddresses, maxPathsPerBucket, estimator);
+            return cachedPaths;
+        }
+
+        Set<Path> allCorrectPaths = new HashSet<>();
+        nextPath:
+        for (Path path : currentLevelGraphPaths) {
+            Map<Integer, Map<Integer, Set<Path>>> currentUnderlyingPaths = path.getEdges().get(0).getSecond().getUnderlyingGraph().
+                    calculateSuboptimalPathsHelper(estimator, initial, maxPathsPerBucket, graphLevel + 1, componentAddress);
+            if (path.getEdges().size() == 1) {
+                allCorrectPaths.addAll(getAllPaths(currentUnderlyingPaths));
+                continue;
+            }
+            Set<Path> correctCurrentPaths = getPathsEndingAt(path.getEdges().get(1).getSecond().getId(), currentUnderlyingPaths);
+            if (correctCurrentPaths == null) {
+                continue;
+            }
+
+            for (int i = 1; i < path.getEdges().size() - 1; ++i) {
+                Map<Integer, Map<Integer, Set<Path>>> nextUnderlyingPaths = path.getEdges().get(i).getSecond().getUnderlyingGraph().
+                        calculateSuboptimalPathsHelper(estimator, initial, maxPathsPerBucket, graphLevel + 1, componentAddress);
+
+                Integer previousId = path.getEdges().get(i - 1).getSecond().getId();
+                assert nextUnderlyingPaths != null;
+                Map<Integer, Set<Path>> correctStartNextPaths = nextUnderlyingPaths.get(previousId);
+                if (correctStartNextPaths == null) {
+                    continue nextPath;
+                }
+
+                Integer nextId = path.getEdges().get(i + 1).getSecond().getId();
+                Set<Path> correctNextPaths = correctStartNextPaths.get(nextId);
+                if (correctNextPaths == null) {
+                    continue nextPath;
+                }
+
+                correctCurrentPaths = connectComponentPaths(correctCurrentPaths, correctNextPaths, estimator);
+            }
+
+            Map<Integer, Map<Integer, Set<Path>>> nextUnderlyingPaths = path.getEdges().get(path.getEdges().size() - 1).getSecond().
+                    getUnderlyingGraph().
+                    calculateSuboptimalPathsHelper(estimator, initial, maxPathsPerBucket, graphLevel + 1, componentAddress);
+            Set<Path> correctEndPaths = getPathsStartingAt(path.getEdges().get(path.getEdges().size() - 2).getSecond().getId(),
+                    nextUnderlyingPaths);
+            if (correctEndPaths == null) {
+                continue;
+            }
+            correctCurrentPaths = connectComponentPaths(correctCurrentPaths, correctEndPaths, estimator);
+            allCorrectPaths.addAll(correctCurrentPaths);
+        }
+        List<Integer> currentLevelAddresses = currentLevelAddresses(componentAddress, graphLevel);
+        cachedPaths = separatePaths(allCorrectPaths, HashSet::new, currentLevelAddresses, maxPathsPerBucket, estimator);
+        return cachedPaths;
     }
 
     // O*(V^V)
