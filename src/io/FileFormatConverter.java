@@ -9,7 +9,7 @@ import java.io.PrintWriter;
 import java.util.*;
 
 public class FileFormatConverter {
-    public static void convert_from_pseudo_csv_to_adequate_graph_description(InputStream pseudo_csv, OutputStream graph_description) {
+    public static void convert_from_pseudo_csv(InputStream pseudo_csv, OutputStream graph_description) {
         Scanner in = new Scanner(pseudo_csv);
         in.nextLine();
         List<Edge> edges = new ArrayList<>();

@@ -1,6 +1,9 @@
 package core;
 
+import estimators.DecompositionEstimator;
 import estimators.PathEstimator;
+import infoproviders.EdgeInfoProvider;
+import infoproviders.NodeInfoProvider;
 import nodeinfo.ComponentInfo;
 import nodeinfo.LongestPathInfo;
 import nodeinfo.NodeInfo;
@@ -223,6 +226,23 @@ public class Graph {
         return result;
     }
 
+    public static List<Double> estimateAllDecompositions(List<List<ComponentInfo>> decompositions, DecompositionEstimator estimator) {
+        List<Double> result = new ArrayList<>();
+        decompositions.forEach(d -> result.add(estimator.estimateDecomposition(d)));
+        return result;
+    }
+
+    private static List<ComponentInfo> mapComponentInfos(List<ComponentInfo> infos, Graph toMap) {
+        for (ComponentInfo info : infos) {
+            info.node = toMap.getNodes().get(info.node.getId());
+        }
+        return infos;
+    }
+
+    public List<Edge> getEdges() {
+        return edges;
+    }
+
     public int getTotalSize() {
         return totalSize;
     }
@@ -292,6 +312,7 @@ public class Graph {
         mst.removeBidirectionalEdge(edge);
     }
 
+    // O(V + E)
     public List<ComponentInfo> getComponentInfo() {
         List<ComponentInfo> result = nodes.stream().map(ComponentInfo::new).collect(Collectors.toList());
         int component = 0;
@@ -304,6 +325,10 @@ public class Graph {
         return result;
     }
 
+//    private void setParentNode(Node parent) {
+//        nodes.forEach(n -> n.setParent(parent));
+//    }
+
     public void removeEdges(Collection<Edge> edges) {
         edges.forEach(this::removeEdge);
     }
@@ -313,10 +338,7 @@ public class Graph {
         edges.remove(edge);
     }
 
-//    private void setParentNode(Node parent) {
-//        nodes.forEach(n -> n.setParent(parent));
-//    }
-
+    // O(E)
     public void removeBidirectionalEdge(Edge edge) {
         Edge reverse = getConnectingEdge(edge.getSecond(), edge.getFirst());
         removeEdge(edge);
@@ -374,7 +396,6 @@ public class Graph {
         for (Map.Entry<Integer, List<ComponentInfo>> entry : components.entrySet()) {
             Graph subgraph = subgraph(getIds(entry.getValue()));
             Node parent = new Node(entry.getKey(), subgraph, -1);
-//            subgraph.setParentNode(parent);
             newNodes.set(entry.getKey(), parent);
         }
         Graph newGraph = new Graph(newNodes);
@@ -385,7 +406,27 @@ public class Graph {
         return newGraph.hierarchicalDecomposition(maxVerticesPerGraph);
     }
 
+    public List<Node> getNodes() {
+        return nodes;
+    }
+
     // O(V * (V + E))
+    public List<List<ComponentInfo>> allDecompositions() {
+        Graph mst = minimalSpanningTree();
+        List<List<ComponentInfo>> result = new ArrayList<>();
+        result.add(mapComponentInfos(mst.getComponentInfo(), this));
+
+        PriorityQueue<Edge> edgeQueue = new PriorityQueue<>(Comparator.comparingDouble(e -> -e.getWeight()));
+        edgeQueue.addAll(mst.edges.stream().filter(e -> e.getFirst().getId() < e.getSecond().getId()).collect(Collectors.toList()));
+
+        while (!edgeQueue.isEmpty()) {
+            Edge maxEdge = edgeQueue.poll();
+            mst.removeBidirectionalEdge(maxEdge);
+            result.add(mapComponentInfos(mst.getComponentInfo(), this));
+        }
+        return result;
+    }
+
     public List<ComponentInfo> decompositionInfo(int maxVerticesPerGraph) {
         Graph mst = minimalSpanningTree();
         List<TreeInfo> treeInfo = mst.collectTreeInfo();
@@ -409,6 +450,50 @@ public class Graph {
         nodes.forEach(n -> addEdge(n, sink, 0));
         nodes.add(source);
         nodes.add(sink);
+    }
+
+    public void writeAsDotToFile(String filename, List<NodeInfoProvider> nodeInfoProviders, List<EdgeInfoProvider> edgeInfoProviders) {
+        try {
+            FileOutputStream output = new FileOutputStream(filename);
+            writeDotRepresentation(output, nodeInfoProviders, edgeInfoProviders);
+            output.close();
+        }
+        catch (IOException exception) {
+            System.err.println(exception.getMessage());
+        }
+    }
+
+    public void writeDotRepresentation(OutputStream outputStream, List<NodeInfoProvider> nodeInfoProviders,
+                                       List<EdgeInfoProvider> edgeInfoProviders) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("digraph {").append(System.lineSeparator());
+        for (Node node : nodes) {
+            builder.append(node.getId());
+            if (!nodeInfoProviders.isEmpty()) {
+                builder.append(" [");
+                for (NodeInfoProvider provider : nodeInfoProviders) {
+                    builder.append(provider.provideInfo(node)).append(" ");
+                }
+                builder.append("]");
+            }
+            builder.append(System.lineSeparator());
+        }
+
+        for (Edge edge : edges) {
+            builder.append(edge.getFirst().getId()).append(" -> ").append(edge.getSecond().getId());
+            if (!edgeInfoProviders.isEmpty()) {
+                builder.append(" [");
+                for (EdgeInfoProvider provider : edgeInfoProviders) {
+                    builder.append(provider.provideInfo(edge)).append(" ");
+                }
+                builder.append("]");
+            }
+            builder.append(System.lineSeparator());
+        }
+        builder.append("}");
+        PrintWriter writer = new PrintWriter(outputStream);
+        writer.print(builder.toString());
+        writer.flush();
     }
 
     public void writeAsDotToFile(String filename) {
