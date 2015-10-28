@@ -9,12 +9,14 @@ import infoproviders.EdgeInfoProvider;
 import infoproviders.EdgeWeightInfoProvider;
 import infoproviders.NodeColorInfoProvider;
 import infoproviders.NodeInfoProvider;
+import io.PdbWorker;
 import nodeinfo.ComponentInfo;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.IntStream;
 
@@ -24,13 +26,21 @@ class Main {
     }
 
     public static void main(String[] args) {
+//        String test = "aqbawbaeb";
+//        Pattern pattern = Pattern.compile("(?:a(\\w)b)+");
+//        Matcher m = pattern.matcher(test);
+//        if (m.matches()) {
+//            int g = m.groupCount();
+//            String t = m.group(0);
+//        }
         try {
             Graph graph = getGraph();
             Path bestPath = longestPathTest(graph);
-            List<ComponentInfo> bestDecomposition = clusterizationTest(graph);
-            List<Integer> clusterPath = clusterPath(bestPath, bestDecomposition);
-            System.out.println("Clusters:");
-            System.out.println(clusterPath);
+            PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");
+//            List<ComponentInfo> bestDecomposition = clusterizationTest(graph);
+//            List<Integer> clusterPath = clusterPath(bestPath, bestDecomposition);
+//            System.out.println("Clusters:");
+//            System.out.println(clusterPath);
         }
         catch (IOException exception) {
             System.err.println(exception.getMessage());
@@ -64,10 +74,11 @@ class Main {
         int maxNodesPerGraph = 6; // > 1
         long maxPathsPerBucket = 5;
         PathEstimator estimator = new LongestPathEstimator();
-        Set<Path> longest = graph.calculateSuboptimalLongestPath(estimator, maxNodesPerGraph, maxPathsPerBucket, 1, 4);
+        Set<Path> longest = graph.calculateSuboptimalLongestPath(estimator, maxNodesPerGraph, maxPathsPerBucket, 1, 2);
         Path best = longest.stream().max(estimator).get();
-        System.out.println(best.getEdges().size());
         System.out.println(best);
+        System.out.println("Old ids:");
+        System.out.println(best.toStringOldId());
 
         return best;
     }

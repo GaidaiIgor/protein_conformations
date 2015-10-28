@@ -115,4 +115,13 @@ public class Path {
         builder.append(String.format("; total weight: %.0f", totalWeight));
         return builder.toString();
     }
+
+    public String toStringOldId() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("void");
+        edges.forEach(e -> builder.append(" -> ").append(e.getSecond().getOldId()));
+        builder.append("; total nodes: ").append(totalNodes);
+        builder.append(String.format("; total weight: %.0f", totalWeight));
+        return builder.toString();
+    }
 }
