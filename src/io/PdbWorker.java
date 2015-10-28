@@ -6,6 +6,8 @@ import core.Path;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -23,21 +25,39 @@ public class PdbWorker {
                 try (FileInputStream edgeInputStream = new FileInputStream(edgeFullPath.toString())) {
                     Scanner in = new Scanner(edgeInputStream).useDelimiter("\\Z");
                     String content = in.next();
-                    Pattern header = Pattern.compile("(?ms)(.*?)^MODEL");
-                    Pattern model = Pattern.compile("(?ms)^MODEL.*?^(.*?^ENDMDL.*?$)");
+                    Pattern headerPattern = Pattern.compile("(?ms)(.*?)^MODEL");
+                    Pattern modelPattern = Pattern.compile("(?ms)^MODEL.*?^(.*?^ENDMDL.*?$)");
+                    List<String> models = new ArrayList<>(10);
+
+                    Matcher modelMatcher = modelPattern.matcher(content);
+                    String firstModel;
+                    if (modelMatcher.find()) {
+                        firstModel = modelMatcher.group(1);
+                    } else {
+                        throw new RuntimeException(edgeFullPath + " doesn't match model pattern");
+                    }
+
                     if (i == 1) {
-                        Matcher headerMatcher = header.matcher(content);
+                        Matcher headerMatcher = headerPattern.matcher(content);
                         if (headerMatcher.find()) {
                             writer.print(headerMatcher.group(1));
                         } else {
                             throw new RuntimeException(edgeFullPath + " doesn't match header pattern");
                         }
+                        models.add(firstModel);
                     }
-                    Matcher modelMatcher = model.matcher(content);
+
                     while (modelMatcher.find()) {
+                        models.add(modelMatcher.group(1));
+                    }
+                    // reverse model sequence if we walked through edge in the opposite direction
+                    if (edge.getFirst().getOldId() > edge.getSecond().getOldId()) {
+                        Collections.reverse(models);
+                    }
+                    for (String model : models) {
                         writer.format("MODEL%9d%n", modelNumber);
                         modelNumber += 1;
-                        writer.println(modelMatcher.group(1));
+                        writer.println(model);
                     }
                 }
             }
