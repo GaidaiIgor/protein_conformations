@@ -94,7 +94,10 @@ public class Graph {
         Scanner in = new Scanner(inputStream);
         int verticesAmount = in.nextInt();
         int edgesAmount = in.nextInt();
-        List<Node> nodes = IntStream.range(0, verticesAmount).mapToObj(Node::new).collect(Collectors.toList());
+        List<Node> nodes = new ArrayList<>();
+        for (int i = 0; i < verticesAmount; ++i) {
+            nodes.add(readNextNode(in, i));
+        }
         Graph graph = new Graph(nodes);
         for (int i = 0; i < edgesAmount; ++i) {
             int node1Id = in.nextInt();
@@ -103,6 +106,11 @@ public class Graph {
             graph.addBidirectionalEdge(graph.nodes.get(node1Id), graph.nodes.get(node2Id), weight);
         }
         return graph;
+    }
+
+    private static Node readNextNode(Scanner in, int nodeId) {
+        int oldId = in.nextInt();
+        return new Node(nodeId, null, oldId);
     }
 
     public void addBidirectionalEdge(Node node1, Node node2, double weight) {
@@ -594,7 +602,6 @@ public class Graph {
     }
 
     // O(log(V) * T(merge))
-    // initial should be decomposed graph
     private Map<Integer, Map<Integer, Set<Path>>>
     calculateSuboptimalPathsHelper(PathEstimator estimator, Graph initial, long maxPathsPerBucket, int graphLevel,
                                    List<List<Integer>> componentAddress, int startId, int endId, int parentId) {

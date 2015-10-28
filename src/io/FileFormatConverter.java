@@ -7,28 +7,39 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.function.Supplier;
 
 public class FileFormatConverter {
-    public static void convert_from_pseudo_csv(InputStream pseudo_csv, OutputStream graph_description) {
-        Scanner in = new Scanner(pseudo_csv);
+    public static void convertFromPseudoCsv(InputStream pseudoCsv, OutputStream graphDescription) {
+        Scanner in = new Scanner(pseudoCsv);
         in.nextLine();
         List<Edge> edges = new ArrayList<>();
-        Map<Integer, Integer> id_map = new HashMap<>();
+        Map<Integer, Integer> oldIdToId = new HashMap<>();
         while (in.hasNext()) {
-            String next_line = in.nextLine();
-            String[] tokens = next_line.split("(,|_)");
-            int node1_id = Integer.parseInt(tokens[1]);
-            int node2_id = Integer.parseInt(tokens[2]);
-            id_map.putIfAbsent(node1_id, id_map.size());
-            id_map.putIfAbsent(node2_id, id_map.size());
-            double edge_weight = Double.parseDouble(tokens[4]);
-            edges.add(new Edge(new Node(id_map.get(node1_id)), new Node(id_map.get(node2_id)), edge_weight));
+            String nextLine = in.nextLine();
+            String[] tokens = nextLine.split("(,|_)");
+            int node1Id = Integer.parseInt(tokens[1]);
+            int node2Id = Integer.parseInt(tokens[2]);
+            oldIdToId.putIfAbsent(node1Id, oldIdToId.size());
+            oldIdToId.putIfAbsent(node2Id, oldIdToId.size());
+            double edgeWeight = Double.parseDouble(tokens[4]);
+            edges.add(new Edge(new Node(oldIdToId.get(node1Id)), new Node(oldIdToId.get(node2Id)), edgeWeight));
         }
+        Map<Integer, Integer> idToOldId = inverseMap(oldIdToId, TreeMap::new);
 
-        PrintWriter out = new PrintWriter(graph_description);
-        out.println(id_map.size());
+        PrintWriter out = new PrintWriter(graphDescription);
+        out.println(oldIdToId.size());
         out.println(edges.size());
+        idToOldId.values().forEach(out::println);
         edges.forEach(e -> out.format("%d %d %f%n", e.getFirst().getId(), e.getSecond().getId(), e.getWeight()));
         out.flush();
+    }
+
+    private static <T> Map<T, T> inverseMap(Map<T, T> original, Supplier<Map<T, T>> newMapSupplier) {
+        Map<T, T> result = newMapSupplier.get();
+        for (Map.Entry<T, T> entry : original.entrySet()) {
+            result.put(entry.getValue(), entry.getKey());
+        }
+        return result;
     }
 }

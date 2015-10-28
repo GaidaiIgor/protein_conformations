@@ -42,7 +42,7 @@ class Main {
         PipedOutputStream convert_stream = new PipedOutputStream();
         PipedInputStream graph_description = new PipedInputStream(convert_stream);
 
-        new Thread(() -> io.FileFormatConverter.convert_from_pseudo_csv(pseudo_csv, convert_stream)).start();
+        new Thread(() -> io.FileFormatConverter.convertFromPseudoCsv(pseudo_csv, convert_stream)).start();
 
         Graph graph = Graph.getFromInputStream(graph_description);
         graph_description.close();
@@ -64,7 +64,7 @@ class Main {
         int maxNodesPerGraph = 6; // > 1
         long maxPathsPerBucket = 5;
         PathEstimator estimator = new LongestPathEstimator();
-        Set<Path> longest = graph.calculateSuboptimalLongestPath(estimator, maxNodesPerGraph, maxPathsPerBucket, 1, 2);
+        Set<Path> longest = graph.calculateSuboptimalLongestPath(estimator, maxNodesPerGraph, maxPathsPerBucket, 1, 4);
         Path best = longest.stream().max(estimator).get();
         System.out.println(best.getEdges().size());
         System.out.println(best);
