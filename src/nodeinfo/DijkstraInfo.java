@@ -1,14 +1,14 @@
 package nodeinfo;
 
-import core.Node;
+import core.HierarchicalNode;
 
 public class DijkstraInfo {
-    public Node node;
+    public HierarchicalNode node;
     public DijkstraInfo previous;
     public boolean is_handled = false;
     public double distance = Double.POSITIVE_INFINITY;
 
-    public DijkstraInfo(Node node, DijkstraInfo previous, double distance) {
+    public DijkstraInfo(HierarchicalNode node, DijkstraInfo previous, double distance) {
         this.node = node;
         this.previous = previous;
         this.distance = distance;

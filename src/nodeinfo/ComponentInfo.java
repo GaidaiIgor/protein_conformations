@@ -1,13 +1,13 @@
 package nodeinfo;
 
-import core.Node;
+import core.HierarchicalNode;
 
 public class ComponentInfo implements NodeInfo {
-    public Node node;
+    public HierarchicalNode node;
     public boolean visited = false;
     public int component = -1;
 
-    public ComponentInfo(Node node) {
+    public ComponentInfo(HierarchicalNode node) {
         this.node = node;
     }
 
@@ -17,7 +17,7 @@ public class ComponentInfo implements NodeInfo {
         component = other.component;
     }
 
-    public Node getNode() {
+    public HierarchicalNode getNode() {
         return node;
     }
 

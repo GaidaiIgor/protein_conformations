@@ -1,7 +1,7 @@
 package infoproviders;
 
-import core.Node;
+import core.HierarchicalNode;
 
 public interface NodeInfoProvider {
-    String provideInfo(Node node);
+    String provideInfo(HierarchicalNode node);
 }

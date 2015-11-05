@@ -1,18 +1,18 @@
 package core;
 
-public final class Edge {
-    private final Node first;
-    private final Node second;
+public final class Edge<T extends AbstractNode> {
+    private final T first;
+    private final T second;
     private final double weight;
     private int id = -1;
 
-    public Edge(Node first, Node second, double weight) {
+    public Edge(T first, T second, double weight) {
         this.first = first;
         this.second = second;
         this.weight = weight;
     }
 
-    public Edge(Node first, Node second, double weight, int id) {
+    public Edge(T first, T second, double weight, int id) {
         this.first = first;
         this.second = second;
         this.weight = weight;
@@ -23,11 +23,11 @@ public final class Edge {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+//    public void setId(int id) {
+//        this.id = id;
+//    }
 
-    public Node getFirst() {
+    public T getFirst() {
         return first;
     }
 
@@ -35,7 +35,7 @@ public final class Edge {
         return weight;
     }
 
-    public Node getSecond() {
+    public T getSecond() {
         return second;
     }
 

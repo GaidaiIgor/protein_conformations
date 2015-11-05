@@ -1,18 +1,18 @@
 package nodeinfo;
 
-import core.Node;
+import core.AbstractNode;
 import core.Path;
 
 import java.util.HashSet;
 import java.util.Set;
 
-public class LongestPathInfo implements NodeInfo {
-    public Node node;
-    public Set<Path> allPaths = new HashSet<>();
-    public Set<Path> currentPaths = new HashSet<>();
-    public Set<Path> nextPaths = new HashSet<>();
+public class LongestPathInfo<T extends AbstractNode<T>> implements NodeInfo<T> {
+    public T node;
+    public Set<Path<T>> allPaths = new HashSet<>();
+    public Set<Path<T>> currentPaths = new HashSet<>();
+    public Set<Path<T>> nextPaths = new HashSet<>();
 
-    public LongestPathInfo(Node node) {
+    public LongestPathInfo(T node) {
         this.node = node;
     }
 
@@ -22,7 +22,7 @@ public class LongestPathInfo implements NodeInfo {
 //        allPaths = other.allPaths.stream().map(Path::copy).collect(Collectors.toCollection(HashSet::new));
 //    }
 
-    public Node getNode() {
+    public T getNode() {
         return node;
     }
 }

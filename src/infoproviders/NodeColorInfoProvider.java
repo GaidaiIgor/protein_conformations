@@ -1,6 +1,6 @@
 package infoproviders;
 
-import core.Node;
+import core.HierarchicalNode;
 import nodeinfo.ComponentInfo;
 
 import java.util.ArrayList;
@@ -29,7 +29,7 @@ public final class NodeColorInfoProvider implements NodeInfoProvider {
     }
 
     @Override
-    public String provideInfo(Node node) {
+    public String provideInfo(HierarchicalNode node) {
         return "color=\"" + componentColors.get(componentInfos.get(node.getId()).component) + "\"";
     }
 }

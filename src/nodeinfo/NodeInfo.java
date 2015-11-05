@@ -1,7 +1,7 @@
 package nodeinfo;
 
-import core.Node;
+import core.AbstractNode;
 
-public interface NodeInfo {
-    Node getNode();
+public interface NodeInfo<T extends AbstractNode<T>> {
+    T getNode();
 }

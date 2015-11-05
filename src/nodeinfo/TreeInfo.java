@@ -1,24 +1,24 @@
 package nodeinfo;
 
-import core.Node;
+import core.HierarchicalNode;
 
 public class TreeInfo implements NodeInfo {
-    public Node node = null;
+    public HierarchicalNode node = null;
     public int level = -1;
     public int subtreeSize = 1;
     public boolean visited = false;
 
-    public TreeInfo(Node node) {
+    public TreeInfo(HierarchicalNode node) {
         this.node = node;
     }
 
-    public TreeInfo(Node node, int level, int subtreeSize) {
+    public TreeInfo(HierarchicalNode node, int level, int subtreeSize) {
         this.node = node;
         this.level = level;
         this.subtreeSize = subtreeSize;
     }
 
-    public Node getNode() {
+    public HierarchicalNode getNode() {
         return node;
     }
 

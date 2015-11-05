@@ -1,7 +1,7 @@
 package io;
 
 import core.Edge;
-import core.Node;
+import core.HierarchicalNode;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,7 +24,8 @@ public class FileFormatConverter {
             oldIdToId.putIfAbsent(node1Id, oldIdToId.size());
             oldIdToId.putIfAbsent(node2Id, oldIdToId.size());
             double edgeWeight = Double.parseDouble(tokens[4]);
-            edges.add(new Edge(new Node(oldIdToId.get(node1Id)), new Node(oldIdToId.get(node2Id)), edgeWeight, edgeId));
+            edges.add(new Edge<>(new HierarchicalNode(oldIdToId.get(node1Id)),
+                    new HierarchicalNode(oldIdToId.get(node2Id)), edgeWeight, edgeId));
         }
         Map<Integer, Integer> idToOldId = inverseMap(oldIdToId, TreeMap::new);
 

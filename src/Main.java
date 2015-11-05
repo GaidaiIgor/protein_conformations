@@ -1,7 +1,4 @@
-import core.Edge;
-import core.Graph;
-import core.Node;
-import core.Path;
+import core.*;
 import estimators.LongestPathEstimator;
 import estimators.MaxWeightDecompositionEstimator;
 import estimators.PathEstimator;
@@ -28,9 +25,9 @@ class Main {
 //        String[] tokens = test.split("_|,");
 
         try {
-            Graph graph = getGraph();
-            Path bestPath = longestPathTest(graph);
-            bestPath.export("path");
+            HierarchicalGraph graph = getGraph();
+            Path<HierarchicalNode> bestPath = longestPathTest(graph);
+            ((MappedPath<HierarchicalNode>) bestPath).export("path");
 //            PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");
 //            List<ComponentInfo> bestDecomposition = clusterizationTest(graph);
 //            List<Integer> clusterPath = clusterPath(bestPath, bestDecomposition);
@@ -42,45 +39,45 @@ class Main {
         }
     }
 
-    public static Graph getGraph() throws IOException {
+    public static HierarchicalGraph getGraph() throws IOException {
         FileInputStream pseudo_csv = new FileInputStream("calmodulin_best_paths.csv");
         PipedOutputStream convert_stream = new PipedOutputStream();
         PipedInputStream graph_description = new PipedInputStream(convert_stream);
 
         new Thread(() -> io.FileFormatConverter.convertFromPseudoCsv(pseudo_csv, convert_stream)).start();
 
-        Graph graph = Graph.getFromInputStream(graph_description);
+        HierarchicalGraph graph = HierarchicalGraph.getFromInputStream(graph_description);
         graph_description.close();
         pseudo_csv.close();
         convert_stream.close();
 
 //        FileInputStream graph_description = new FileInputStream("input");
-//        Graph graph = Graph.getFromInputStream(graph_description);
+//        HierarchicalGraph graph = HierarchicalGraph.getFromInputStream(graph_description);
 //        graph_description.close();
 
         return graph;
     }
 
-    public static Path longestPathTest(Graph graph) throws IOException {
+    public static Path<HierarchicalNode> longestPathTest(HierarchicalGraph graph) throws IOException {
 //        FileOutputStream graph_dot = new FileOutputStream("graph.dot");
 //        graph.writeDotRepresentation(graph_dot);
 //        graph_dot.close();
 
         int maxNodesPerGraph = 6; // > 1
         long maxPathsPerBucket = 5;
-        PathEstimator estimator = new LongestPathEstimator();
-        Set<Path> longest = graph.calculateSuboptimalLongestPath(estimator, maxNodesPerGraph, maxPathsPerBucket, 1, 2);
-        Path best = longest.stream().max(estimator).get();
+        PathEstimator<HierarchicalNode> estimator = new LongestPathEstimator<>();
+        Set<Path<HierarchicalNode>> longest = graph.calculateSuboptimalLongestPath(estimator, maxNodesPerGraph, maxPathsPerBucket, 1, 2);
+        Path<HierarchicalNode> best = longest.stream().max(estimator).get();
         System.out.println(best);
         System.out.println("Old ids:");
-        System.out.println(best.toStringOldId());
+        System.out.println(((MappedPath<HierarchicalNode>) best).toStringOldId());
 
         return best;
     }
 
-    public static List<ComponentInfo> clusterizationTest(Graph graph) throws IOException {
+    public static List<ComponentInfo> clusterizationTest(HierarchicalGraph graph) throws IOException {
         List<List<ComponentInfo>> decompositions = graph.allDecompositions();
-        List<Double> scores = Graph.estimateAllDecompositions(decompositions, new MaxWeightDecompositionEstimator());
+        List<Double> scores = HierarchicalGraph.estimateAllDecompositions(decompositions, new MaxWeightDecompositionEstimator());
         List<ComponentInfo> bestDecomposition = decompositions.get(8);
         List<NodeInfoProvider> nodeInfoProviders = Collections.singletonList(new NodeColorInfoProvider(bestDecomposition));
         List<EdgeInfoProvider> edgeInfoProviders = Collections.singletonList(new EdgeWeightInfoProvider());
@@ -89,10 +86,10 @@ class Main {
         return bestDecomposition;
     }
 
-    public static List<Integer> clusterPath(Path path, List<ComponentInfo> clusterization) {
+    public static List<Integer> clusterPath(Path<HierarchicalNode> path, List<ComponentInfo> clusterization) {
         List<Integer> clusters = new ArrayList<>();
-        for (Edge edge : path.getEdges()) {
-            Node next = edge.getSecond();
+        for (Edge<HierarchicalNode> edge : path.getEdges()) {
+            HierarchicalNode next = edge.getSecond();
             clusters.add(clusterization.get(next.getId()).component);
         }
         return clusters;

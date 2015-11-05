@@ -2,8 +2,6 @@ package core;
 
 import estimators.PathEstimator;
 
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -11,9 +9,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class Path {
+public class Path<T extends AbstractNode<T>> {
     private final Set<Integer> usedIds;
-    private final List<Edge> edges;
+    private final List<Edge<T>> edges;
     private double totalWeight = 0;
     private double score = 0;
     private int totalNodes = 0;
@@ -22,30 +20,34 @@ public class Path {
         this(new HashSet<>(), new ArrayList<>());
     }
 
-    public Path(Set<Integer> usedIds, List<Edge> edges) {
+    public Path(Set<Integer> usedIds, List<Edge<T>> edges) {
         this.usedIds = usedIds;
         this.edges = edges;
     }
 
-    public Path(Set<Integer> usedIds, List<Edge> edges, Path other) {
+    public Path(Set<Integer> usedIds, List<Edge<T>> edges, Path other) {
         this(usedIds, edges);
         totalWeight = other.totalWeight;
         score = other.score;
         totalNodes = other.totalNodes;
     }
 
-    public static Path getTrivialPath(Node singleNode, PathEstimator estimator) {
-        Path newPath = new Path();
+    public static <T extends AbstractNode<T>> Path<T> getTrivialPath(T singleNode, PathEstimator<T> estimator) {
+        Path<T> newPath = new Path<>();
         newPath.usedIds.add(singleNode.getId());
-        newPath.edges.add(new Edge(null, singleNode, 0));
-        newPath.totalNodes = singleNode.getSize();
+        newPath.edges.add(new Edge<>(null, singleNode, 0));
+        newPath.totalNodes = 1;
+        if (singleNode instanceof HierarchicalNode) {
+            newPath.totalNodes = ((HierarchicalNode) singleNode).getSize();
+        }
         newPath.score = estimator.pathScore(newPath);
         return newPath;
     }
 
     // fork_other edges by reference
-    public static Path merge(Path path1, Path path2, int path1BreakIndex, int path2BreakIndex, Edge bridge, PathEstimator estimator) {
-        Path newPath = new Path();
+    public static <T extends AbstractNode<T>> Path<T> merge(Path<T> path1, Path<T> path2, int path1BreakIndex, int path2BreakIndex,
+                                                            Edge<T> bridge, PathEstimator<T> estimator) {
+        Path<T> newPath = new Path<>();
 
         newPath.edges.addAll(path1.edges.subList(0, path1BreakIndex + 1));
         newPath.edges.add(bridge);
@@ -54,17 +56,20 @@ public class Path {
         newPath.edges.forEach(e -> newPath.usedIds.add(e.getSecond().getId()));
 
         newPath.totalWeight = newPath.edges.stream().collect(Collectors.summingDouble(Edge::getWeight));
-        newPath.totalNodes = newPath.edges.stream().mapToInt(e -> e.getSecond().getSize()).sum();
+        newPath.totalNodes = newPath.edges.size();
+        if (newPath.getEdges().get(0).getSecond() instanceof HierarchicalNode) {
+            newPath.totalNodes = newPath.edges.stream().mapToInt(e -> ((HierarchicalNode) e.getSecond()).getSize()).sum();
+        }
         newPath.score = estimator.pathScore(newPath);
         return newPath;
     }
 
-    public Set<Integer> getUsedIds() {
-        return usedIds;
+    public List<Edge<T>> getEdges() {
+        return edges;
     }
 
-    public List<Edge> getEdges() {
-        return edges;
+    public Set<Integer> getUsedIds() {
+        return usedIds;
     }
 
     public double getTotalWeight() {
@@ -105,7 +110,8 @@ public class Path {
             return false;
         }
         Path other = (Path) object;
-        return edges.size() == other.edges.size() && IntStream.range(0, edges.size()).mapToObj(i -> edges.get(i).equals(other.edges.get(i))).allMatch(b -> b);
+        return edges.size() == other.edges.size() &&
+                IntStream.range(0, edges.size()).mapToObj(i -> edges.get(i).equals(other.edges.get(i))).allMatch(b -> b);
     }
 
     @Override
@@ -116,28 +122,5 @@ public class Path {
         builder.append("; total nodes: ").append(totalNodes);
         builder.append(String.format("; total weight: %.0f", totalWeight));
         return builder.toString();
-    }
-
-    public String toStringOldId() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("void");
-        edges.forEach(e -> builder.append(" -> ").append(e.getSecond().getOldId()));
-        builder.append("; total nodes: ").append(totalNodes);
-        builder.append(String.format("; total weight: %.0f", totalWeight));
-        return builder.toString();
-    }
-
-    public void export(String filename) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 1; i < edges.size(); ++i) {
-            Edge e = edges.get(i);
-            builder.append(String.format("%d %d %d%n", e.getFirst().getOldId(), e.getSecond().getOldId(), e.getId()));
-        }
-        try (PrintWriter writer = new PrintWriter(filename)) {
-            writer.write(builder.toString());
-        }
-        catch (IOException e) {
-            throw new RuntimeException();
-        }
     }
 }
