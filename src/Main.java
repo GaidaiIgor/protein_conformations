@@ -9,14 +9,12 @@ import infoproviders.EdgeInfoProvider;
 import infoproviders.EdgeWeightInfoProvider;
 import infoproviders.NodeColorInfoProvider;
 import infoproviders.NodeInfoProvider;
-import io.PdbWorker;
 import nodeinfo.ComponentInfo;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.IntStream;
 
@@ -26,17 +24,14 @@ class Main {
     }
 
     public static void main(String[] args) {
-//        String test = "aqbawbaeb";
-//        Pattern pattern = Pattern.compile("(?:a(\\w)b)+");
-//        Matcher m = pattern.matcher(test);
-//        if (m.matches()) {
-//            int g = m.groupCount();
-//            String t = m.group(0);
-//        }
+//        String test = "a_v,s_,s";
+//        String[] tokens = test.split("_|,");
+
         try {
             Graph graph = getGraph();
             Path bestPath = longestPathTest(graph);
-            PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");
+            bestPath.export("path");
+//            PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");
 //            List<ComponentInfo> bestDecomposition = clusterizationTest(graph);
 //            List<Integer> clusterPath = clusterPath(bestPath, bestDecomposition);
 //            System.out.println("Clusters:");

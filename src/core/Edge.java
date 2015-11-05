@@ -4,11 +4,27 @@ public final class Edge {
     private final Node first;
     private final Node second;
     private final double weight;
+    private int id = -1;
 
     public Edge(Node first, Node second, double weight) {
         this.first = first;
         this.second = second;
         this.weight = weight;
+    }
+
+    public Edge(Node first, Node second, double weight, int id) {
+        this.first = first;
+        this.second = second;
+        this.weight = weight;
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public Node getFirst() {

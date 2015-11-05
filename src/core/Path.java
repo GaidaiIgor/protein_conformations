@@ -2,6 +2,8 @@ package core;
 
 import estimators.PathEstimator;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -123,5 +125,19 @@ public class Path {
         builder.append("; total nodes: ").append(totalNodes);
         builder.append(String.format("; total weight: %.0f", totalWeight));
         return builder.toString();
+    }
+
+    public void export(String filename) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 1; i < edges.size(); ++i) {
+            Edge e = edges.get(i);
+            builder.append(String.format("%d %d %d%n", e.getFirst().getOldId(), e.getSecond().getOldId(), e.getId()));
+        }
+        try (PrintWriter writer = new PrintWriter(filename)) {
+            writer.write(builder.toString());
+        }
+        catch (IOException e) {
+            throw new RuntimeException();
+        }
     }
 }

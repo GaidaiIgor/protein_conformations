@@ -103,7 +103,8 @@ public class Graph {
             int node1Id = in.nextInt();
             int node2Id = in.nextInt();
             double weight = in.nextDouble();
-            graph.addBidirectionalEdge(graph.nodes.get(node1Id), graph.nodes.get(node2Id), weight);
+            int id = in.nextInt();
+            graph.addBidirectionalEdge(graph.nodes.get(node1Id), graph.nodes.get(node2Id), weight, id);
         }
         return graph;
     }
@@ -113,13 +114,13 @@ public class Graph {
         return new Node(nodeId, null, oldId);
     }
 
-    public void addBidirectionalEdge(Node node1, Node node2, double weight) {
-        addEdge(node1, node2, weight);
-        addEdge(node2, node1, weight);
+    public void addBidirectionalEdge(Node node1, Node node2, double weight, int edgeId) {
+        addEdge(node1, node2, weight, edgeId);
+        addEdge(node2, node1, weight, edgeId);
     }
 
-    public Edge addEdge(Node node1, Node node2, double weight) {
-        Edge newEdge = new Edge(node1, node2, weight);
+    public Edge addEdge(Node node1, Node node2, double weight, int edgeId) {
+        Edge newEdge = new Edge(node1, node2, weight, edgeId);
         node1.getEdges().add(newEdge);
         edges.add(newEdge);
         return newEdge;
@@ -250,6 +251,18 @@ public class Graph {
     private static boolean filterPath(Path path, int startId, int endId) {
         return (startId == -1 || path.getEdges().get(0).getSecond().getId() == startId) &&
                 (endId == -1 || path.getEdges().get(path.getEdges().size() - 1).getSecond().getId() == endId);
+    }
+
+    public void addBidirectionalEdge(Node node1, Node node2, double weight) {
+        addEdge(node1, node2, weight);
+        addEdge(node2, node1, weight);
+    }
+
+    public Edge addEdge(Node node1, Node node2, double weight) {
+        Edge newEdge = new Edge(node1, node2, weight);
+        node1.getEdges().add(newEdge);
+        edges.add(newEdge);
+        return newEdge;
     }
 
     public List<Edge> getEdges() {

@@ -1,0 +1,46 @@
+function trm = trmFmincon(trm, trmAnglesIndices, trmFunction, ...
+    trmFunctionAdditionalParameters, algorithm, MaxIter,tolx)
+%TRMFMINCON Minimizes the cost of toransformation model.
+%   trmfmincon(trm, trmAnglesIndices, trmFunction, ...
+%   trmFunctionAdditionalParameters, algorithm, MaxIter, ...
+%   minfimprovement)
+%   trm - transformation model
+%   trmAnglesIndices - angles to optimize
+%   trmFunction(trm, trmAnglesIndices, trmAnglesValues, ...
+%   trmFunctionAdditionalParameters) - pointer to cost function
+%   algorithm - see fmincon
+%   MaxIter - see fmincon
+%
+%   Example:
+%       optTrm = trmfmincon(trm,trmAngles,@trmcostlp,2,'interior-point',100);
+%
+% Protein Transformation Toolbox for MATLAB
+%
+% By Gaik Tamazian, 2012.
+% tamaz.g@star.math.spbu.ru
+%
+% By Sergey Knyazev, 2012.
+% sergey.n.knyazev@gmail.com
+
+if isempty(tolx)
+    tolx = 1e-10;
+end
+
+if isempty(trmFunctionAdditionalParameters)
+    objfunc = @(trmAnglesValues)trmFunction(trm, trmAnglesIndices, ...
+        trmAnglesValues);
+else
+    objfunc = @(trmAnglesValues)trmFunction(trm, trmAnglesIndices, ...
+        trmAnglesValues, trmFunctionAdditionalParameters);
+end
+options = optimset('UseParallel', 'always', 'algorithm', algorithm, ...
+    'MaxIter', MaxIter, 'MaxFunEvals', Inf, ...
+    'Display', 'iter', ...
+    'TolX' , tolx);
+trm.psi(trmAnglesIndices,2:end-1) = ...
+    fmincon(objfunc, trm.psi(trmAnglesIndices,2:end-1), ...
+    [], [], [], [], ...
+    ones(1,length(trmAnglesIndices))*(-pi), ...
+    ones(1,length(trmAnglesIndices))*pi, ...
+    [], options);
+end

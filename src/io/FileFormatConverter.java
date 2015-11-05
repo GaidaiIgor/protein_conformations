@@ -17,13 +17,14 @@ public class FileFormatConverter {
         Map<Integer, Integer> oldIdToId = new HashMap<>();
         while (in.hasNext()) {
             String nextLine = in.nextLine();
-            String[] tokens = nextLine.split("(,|_)");
+            String[] tokens = nextLine.split(",|_");
             int node1Id = Integer.parseInt(tokens[1]);
             int node2Id = Integer.parseInt(tokens[2]);
+            int edgeId = Integer.parseInt(tokens[3].split("\\.")[0]);
             oldIdToId.putIfAbsent(node1Id, oldIdToId.size());
             oldIdToId.putIfAbsent(node2Id, oldIdToId.size());
             double edgeWeight = Double.parseDouble(tokens[4]);
-            edges.add(new Edge(new Node(oldIdToId.get(node1Id)), new Node(oldIdToId.get(node2Id)), edgeWeight));
+            edges.add(new Edge(new Node(oldIdToId.get(node1Id)), new Node(oldIdToId.get(node2Id)), edgeWeight, edgeId));
         }
         Map<Integer, Integer> idToOldId = inverseMap(oldIdToId, TreeMap::new);
 
@@ -31,7 +32,7 @@ public class FileFormatConverter {
         out.println(oldIdToId.size());
         out.println(edges.size());
         idToOldId.values().forEach(out::println);
-        edges.forEach(e -> out.format("%d %d %f%n", e.getFirst().getId(), e.getSecond().getId(), e.getWeight()));
+        edges.forEach(e -> out.format("%d %d %f %d%n", e.getFirst().getId(), e.getSecond().getId(), e.getWeight(), e.getId()));
         out.flush();
     }
 
