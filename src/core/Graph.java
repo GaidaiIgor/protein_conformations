@@ -20,8 +20,8 @@ public class Graph<T extends AbstractNode<T>> {
     // 2nd line: total amount of edges = e
     // next n lines: description of n vertices, one per line
     // next e lines: description of e edges, one per line
-    public static <T extends AbstractNode<T>> Graph getFromInputStream(InputStream inputStream,
-                                                                       BiFunction<Scanner, Integer, T> nodeReader) {
+    public static <T extends AbstractNode<T>> Graph<T> getFromInputStream(InputStream inputStream,
+                                                                          BiFunction<Scanner, Integer, T> nodeReader) {
         Scanner in = new Scanner(inputStream);
         int verticesAmount = in.nextInt();
         int edgesAmount = in.nextInt();

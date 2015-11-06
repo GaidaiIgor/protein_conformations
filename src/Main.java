@@ -13,7 +13,17 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+class DumbFilter<T extends AbstractNode<T>> implements PathFilter<T> {
+    @Override
+    public List<Path<T>> filterPaths(List<Path<T>> allPaths, int maxPaths) {
+        return allPaths.stream().
+                sorted(Comparator.<Path<T>>comparingInt(p -> -p.getTotalNodes()).thenComparingDouble(Path::getTotalWeight)).limit(maxPaths).
+                collect(Collectors.toList());
+    }
+}
 
 class Main {
     public static int getClosestIndex(List<Double> numbers, Double value) {
@@ -21,13 +31,12 @@ class Main {
     }
 
     public static void main(String[] args) {
-//        String test = "a_v,s_,s";
-//        String[] tokens = test.split("_|,");
-
         try {
-            HierarchicalGraph graph = getGraph();
-            Path<HierarchicalNode> bestPath = longestPathTest(graph);
-            ((MappedPath<HierarchicalNode>) bestPath).export("path");
+            Graph<CommonNode> graph = getGraph();
+            EllipsePathFinder<CommonNode> pathFinder = new EllipsePathFinder<>(graph, 0.1, 10, new DumbFilter<>());
+            List<Path<CommonNode>> paths = pathFinder.findPaths(0, 1);
+//            Path<HierarchicalNode> bestPath = longestPathTest(graph);
+//            MappedPath.fromPath(bestPath).export("path");
 //            PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");
 //            List<ComponentInfo> bestDecomposition = clusterizationTest(graph);
 //            List<Integer> clusterPath = clusterPath(bestPath, bestDecomposition);
@@ -39,14 +48,14 @@ class Main {
         }
     }
 
-    public static HierarchicalGraph getGraph() throws IOException {
+    public static Graph<CommonNode> getGraph() throws IOException {
         FileInputStream pseudo_csv = new FileInputStream("calmodulin_best_paths.csv");
         PipedOutputStream convert_stream = new PipedOutputStream();
         PipedInputStream graph_description = new PipedInputStream(convert_stream);
 
         new Thread(() -> io.FileFormatConverter.convertFromPseudoCsv(pseudo_csv, convert_stream)).start();
 
-        HierarchicalGraph graph = HierarchicalGraph.getFromInputStream(graph_description);
+        Graph<CommonNode> graph = Graph.getFromInputStream(graph_description, CommonNode::readNode);
         graph_description.close();
         pseudo_csv.close();
         convert_stream.close();

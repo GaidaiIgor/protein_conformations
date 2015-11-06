@@ -14,11 +14,6 @@ public class LongestPathEstimator<T extends AbstractNode<T>> implements PathEsti
     }
 
     @Override
-    public double pathScore(Path<T> path) {
-        return path.getTotalNodes();
-    }
-
-    @Override
     public Path<T> mergePaths(Path<T> path1, Path<T> path2) {
         for (int nodes_given = 0; nodes_given <= path1.getEdges().size() + path2.getEdges().size() - 2; ++nodes_given) {
             int path1_given = Integer.min(nodes_given, path1.getEdges().size() - 1);
@@ -31,17 +26,12 @@ public class LongestPathEstimator<T extends AbstractNode<T>> implements PathEsti
                 T second = path2.getEdges().get(path2_break_index).getSecond();
                 Edge<T> bridge = HierarchicalGraph.getConnectingEdge(first, second);
                 if (bridge != null) {
-                    return Path.merge(path1, path2, path1_break_index, path2_break_index, bridge, this);
+                    return Path.merge(path1, path2, path1_break_index, path2_break_index, bridge);
                 }
                 --path1_given;
                 ++path2_given;
             }
         }
         return null;
-    }
-
-    // TODO: implement reasonable logic
-    public boolean is_correct(Path path1, Path path2, int path1_node_id, int path2_node_id, Edge edge) {
-        return true;
     }
 }

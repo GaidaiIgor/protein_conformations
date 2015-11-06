@@ -1,7 +1,5 @@
 package core;
 
-import estimators.PathEstimator;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -13,7 +11,6 @@ public class Path<T extends AbstractNode<T>> {
     private final Set<Integer> usedIds;
     private final List<Edge<T>> edges;
     private double totalWeight = 0;
-    private double score = 0;
     private int totalNodes = 0;
 
     public Path() {
@@ -28,11 +25,10 @@ public class Path<T extends AbstractNode<T>> {
     public Path(Set<Integer> usedIds, List<Edge<T>> edges, Path other) {
         this(usedIds, edges);
         totalWeight = other.totalWeight;
-        score = other.score;
         totalNodes = other.totalNodes;
     }
 
-    public static <T extends AbstractNode<T>> Path<T> getTrivialPath(T singleNode, PathEstimator<T> estimator) {
+    public static <T extends AbstractNode<T>> Path<T> getTrivialPath(T singleNode) {
         Path<T> newPath = new Path<>();
         newPath.usedIds.add(singleNode.getId());
         newPath.edges.add(new Edge<>(null, singleNode, 0));
@@ -40,13 +36,12 @@ public class Path<T extends AbstractNode<T>> {
         if (singleNode instanceof HierarchicalNode) {
             newPath.totalNodes = ((HierarchicalNode) singleNode).getSize();
         }
-        newPath.score = estimator.pathScore(newPath);
         return newPath;
     }
 
-    // fork_other edges by reference
+    // connect path1BreakIndex node in path1 with path2BreakIndex node in path2
     public static <T extends AbstractNode<T>> Path<T> merge(Path<T> path1, Path<T> path2, int path1BreakIndex, int path2BreakIndex,
-                                                            Edge<T> bridge, PathEstimator<T> estimator) {
+                                                            Edge<T> bridge) {
         Path<T> newPath = new Path<>();
 
         newPath.edges.addAll(path1.edges.subList(0, path1BreakIndex + 1));
@@ -60,7 +55,6 @@ public class Path<T extends AbstractNode<T>> {
         if (newPath.getEdges().get(0).getSecond() instanceof HierarchicalNode) {
             newPath.totalNodes = newPath.edges.stream().mapToInt(e -> ((HierarchicalNode) e.getSecond()).getSize()).sum();
         }
-        newPath.score = estimator.pathScore(newPath);
         return newPath;
     }
 
@@ -74,14 +68,6 @@ public class Path<T extends AbstractNode<T>> {
 
     public double getTotalWeight() {
         return totalWeight;
-    }
-
-    public double getScore() {
-        return score;
-    }
-
-    public void setScore(double score) {
-        this.score = score;
     }
 
     public int getTotalNodes() {

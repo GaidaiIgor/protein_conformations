@@ -131,7 +131,7 @@ public class HierarchicalGraph extends Graph<HierarchicalNode> {
         return infos.stream().map(i -> i.getNode().getId()).collect(Collectors.toList());
     }
 
-    private static <T extends Collection<Path<HierarchicalNode>>> T trimPaths(T paths, PathEstimator<HierarchicalNode> estimator) {
+    private static <T extends Collection<Path<HierarchicalNode>>> T trimPaths(T paths) {
         for (Path<HierarchicalNode> path : paths) {
             path.getUsedIds().remove(path.getEdges().get(0).getSecond().getId());
             path.getUsedIds().remove(path.getEdges().get(path.getEdges().size() - 1).getSecond().getId());
@@ -140,7 +140,6 @@ public class HierarchicalGraph extends Graph<HierarchicalNode> {
             path.getEdges().add(0, new Edge<>(null, first, 0));
             path.getEdges().remove(path.getEdges().size() - 1);
             path.setTotalNodes(path.getTotalNodes() - 2);
-            path.setScore(estimator.pathScore(path));
         }
         return paths;
     }
@@ -618,8 +617,8 @@ public class HierarchicalGraph extends Graph<HierarchicalNode> {
         List<Integer> previousLevelAddresses = getLevelAddresses(componentAddress, graphLevel - 1);
         List<Integer> currentLevelAddresses = getLevelAddresses(componentAddress, graphLevel);
         addSourceSink();
-        LongestPathInfo<HierarchicalNode> pathInfo = calculateLongestPaths(getNodes().size() - 2, estimator).get(getNodes().size() - 1);
-        Set<Path<HierarchicalNode>> currentLevelGraphPaths = trimPaths(pathInfo.allPaths, estimator);
+        LongestPathInfo<HierarchicalNode> pathInfo = calculateLongestPaths(getNodes().size() - 2).get(getNodes().size() - 1);
+        Set<Path<HierarchicalNode>> currentLevelGraphPaths = trimPaths(pathInfo.allPaths);
 
         // if start or end id don't belong to this cluster, set them to -1
         startId = startId == -1 ? -1 : previousLevelAddresses.get(startId) == parentId ? startId : -1;
@@ -694,11 +693,11 @@ public class HierarchicalGraph extends Graph<HierarchicalNode> {
     }
 
     // O*(V^V)
-    public List<LongestPathInfo<HierarchicalNode>> calculateLongestPaths(int startNodeId, PathEstimator<HierarchicalNode> estimator) {
+    public List<LongestPathInfo<HierarchicalNode>> calculateLongestPaths(int startNodeId) {
         List<LongestPathInfo<HierarchicalNode>> infos = getNodes().stream().map(LongestPathInfo::new).collect(Collectors.toList());
 //        writeAsDotToFile("test.dot");
         LongestPathInfo<HierarchicalNode> startNode = infos.get(startNodeId);
-        Path<HierarchicalNode> trivialPath = Path.getTrivialPath(getNodes().get(startNodeId), estimator);
+        Path<HierarchicalNode> trivialPath = Path.getTrivialPath(getNodes().get(startNodeId));
         startNode.allPaths.add(trivialPath);
         startNode.currentPaths.add(trivialPath);
         List<Edge<HierarchicalNode>> allEdges = getEdges().stream().collect(Collectors.toList());
@@ -709,7 +708,7 @@ public class HierarchicalGraph extends Graph<HierarchicalNode> {
             for (Edge<HierarchicalNode> edge : allEdges) {
                 LongestPathInfo<HierarchicalNode> node1Info = infos.get(edge.getFirst().getId());
                 LongestPathInfo<HierarchicalNode> node2Info = infos.get(edge.getSecond().getId());
-                nextPathsPending |= tryUpdateNext(node1Info, node2Info, edge, estimator);
+                nextPathsPending |= tryUpdateNext(node1Info, node2Info, edge);
             }
             updateLongestPathsInfos(infos);
         }
@@ -718,10 +717,10 @@ public class HierarchicalGraph extends Graph<HierarchicalNode> {
 
     // O*(V^V)
     private boolean tryUpdateNext(LongestPathInfo<HierarchicalNode> previous, LongestPathInfo<HierarchicalNode> next,
-                                  Edge<HierarchicalNode> edge, PathEstimator<HierarchicalNode> estimator) {
+                                  Edge<HierarchicalNode> edge) {
         List<Path<HierarchicalNode>> extendedPaths = previous.currentPaths.stream().
                 filter(p -> !p.getUsedIds().contains(next.node.getId())).
-                map(p -> Path.merge(p, Path.getTrivialPath(next.node, estimator), p.getEdges().size() - 1, 0, edge, estimator)).
+                map(p -> Path.merge(p, Path.getTrivialPath(next.node), p.getEdges().size() - 1, 0, edge)).
                 filter(p -> !next.allPaths.contains(p)).
                 collect(Collectors.toList());
         next.allPaths.addAll(extendedPaths);

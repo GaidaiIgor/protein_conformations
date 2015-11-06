@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 public class MappedPath<T extends AbstractMappedNode<T>> extends Path<T> {
+    public static <T extends AbstractMappedNode<T>> MappedPath<T> fromPath(Path<T> path) {
+        return (MappedPath<T>) path;
+    }
+
     public String toStringOldId() {
         StringBuilder builder = new StringBuilder();
         builder.append("void");
