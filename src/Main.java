@@ -16,12 +16,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-class DumbFilter<T extends AbstractNode<T>> implements PathFilter<T> {
+class DummyFilter<T extends AbstractNode<T>> implements PathFilter<T> {
     @Override
-    public List<Path<T>> filterPaths(List<Path<T>> allPaths, int maxPaths) {
+    public Set<Path<T>> filterPaths(Collection<Path<T>> allPaths, int maxPaths) {
         return allPaths.stream().
                 sorted(Comparator.<Path<T>>comparingInt(p -> -p.getTotalNodes()).thenComparingDouble(Path::getTotalWeight)).limit(maxPaths).
-                collect(Collectors.toList());
+                collect(Collectors.toCollection(HashSet::new));
     }
 }
 
@@ -33,8 +33,8 @@ class Main {
     public static void main(String[] args) {
         try {
             Graph<CommonNode> graph = getGraph();
-            EllipsePathFinder<CommonNode> pathFinder = new EllipsePathFinder<>(graph, 0.1, 10, new DumbFilter<>());
-            List<Path<CommonNode>> paths = pathFinder.findPaths(0, 1);
+            EllipsePathFinder<CommonNode> pathFinder = new EllipsePathFinder<>(graph, 0.1, 10, new DummyFilter<>());
+            Set<Path<CommonNode>> paths = pathFinder.findPaths(0, 1);
 //            Path<HierarchicalNode> bestPath = longestPathTest(graph);
 //            MappedPath.fromPath(bestPath).export("path");
 //            PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");

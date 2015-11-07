@@ -1,7 +1,8 @@
 package core;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.Set;
 
 public interface PathFilter<T extends AbstractNode<T>> {
-    List<Path<T>> filterPaths(List<Path<T>> allPaths, int maxPaths);
+    Set<Path<T>> filterPaths(Collection<Path<T>> allPaths, int maxPaths);
 }

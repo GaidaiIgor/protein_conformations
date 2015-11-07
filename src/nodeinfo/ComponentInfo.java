@@ -2,7 +2,7 @@ package nodeinfo;
 
 import core.HierarchicalNode;
 
-public class ComponentInfo implements NodeInfo {
+public class ComponentInfo implements NodeInfo<HierarchicalNode> {
     public HierarchicalNode node;
     public boolean visited = false;
     public int component = -1;

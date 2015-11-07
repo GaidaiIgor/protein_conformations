@@ -338,7 +338,7 @@ function longArcTable_CellSelectionCallback(hObject, eventdata, handles)
 updateBidirectionalAnglesTableInfo(handles)
 
 
-% --- Executes on key press with focus on longArcTable and none of its controls.
+% --- Executes on key press with perifocalDist on longArcTable and none of its controls.
 function longArcTable_KeyPressFcn(hObject, eventdata, handles)
 % hObject    handle to longArcTable (see GCBO)
 % eventdata  structure with the following fields (see UITABLE)

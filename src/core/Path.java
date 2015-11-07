@@ -62,6 +62,21 @@ public class Path<T extends AbstractNode<T>> {
         return edges;
     }
 
+    public Path<T> extendWith(Edge<T> nextEdge) {
+        if (nextEdge.getFirst() != edges.get(edges.size() - 1).getSecond()) {
+            throw new IllegalArgumentException("First node of new edge doesn't match last node of this path");
+        }
+        usedIds.add(nextEdge.getSecond().getId());
+        edges.add(nextEdge);
+        totalWeight += nextEdge.getWeight();
+        if (nextEdge.getSecond() instanceof HierarchicalNode) {
+            totalNodes += ((HierarchicalNode) nextEdge.getSecond()).getSize();
+        } else {
+            totalNodes += 1;
+        }
+        return this;
+    }
+
     public Set<Integer> getUsedIds() {
         return usedIds;
     }

@@ -2,7 +2,7 @@ package nodeinfo;
 
 import core.HierarchicalNode;
 
-public class TreeInfo implements NodeInfo {
+public class TreeInfo implements NodeInfo<HierarchicalNode> {
     public HierarchicalNode node = null;
     public int level = -1;
     public int subtreeSize = 1;
