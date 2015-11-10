@@ -116,8 +116,10 @@ public class EllipsePathFinder<T extends AbstractNode<T>> {
             double z1 = Math.sqrt(b1 * b1 - h * h);
             double z2 = Math.sqrt(b2 * b2 - h * h);
 
-//            double test = -(4*h*h - w*w + z1*z1 - 2*z1*z2 + z2*z2)/(w*w - z1*z1 + 2*z1*z2 - z2*z2);
-//            double res = z1/2 + z2/2 - (w*Math.sqrt(test))/2;
+            double test = -(4 * h * h - w * w + z1 * z1 - 2 * z1 * z2 + z2 * z2) / (w * w - z1 * z1 + 2 * z1 * z2 - z2 * z2);
+            double res = z1 / 2 + z2 / 2 - (w * Math.sqrt(test)) / 2;
+            double coord = (b1 + w - b2) / 2;
+            double height = Math.sqrt(w * perifocalDist - perifocalDist * perifocalDist);
 
             return z1 / 2 + z2 / 2 - (w * Math.sqrt(-(4 * h * h - w * w + z1 * z1 - 2 * z1 * z2 + z2 * z2) / (w * w - z1 * z1 + 2 * z1 * z2 - z2 * z2))) / 2;
         }

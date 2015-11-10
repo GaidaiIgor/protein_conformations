@@ -3,6 +3,9 @@ pathFile = fopen(pathToPath, 'rt');
 nextLine = fgetl(pathFile);
 edge = cellfun(@str2num, strsplit(nextLine));
 summaryPdb = getPdbForEdge(edge, proteinName, pathToEdges);
+if edge(1) > edge(2)
+    summaryPdb.Model = summaryPdb.Model(end:-1:1);
+end
 while true
     nextLine = fgetl(pathFile);
     if ~ischar(nextLine)
@@ -14,7 +17,7 @@ while true
     
     % append edge
     if isReverse
-        range = length(edgePdb.Model):-1:2;
+        range = length(edgePdb.Model) - 1:-1:1;
     else
         range = 2:length(edgePdb.Model);
     end

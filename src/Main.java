@@ -15,13 +15,17 @@ import java.io.PipedOutputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 class DummyFilter<T extends AbstractNode<T>> implements PathFilter<T> {
     @Override
     public Set<Path<T>> filterPaths(Collection<Path<T>> allPaths, int maxPaths) {
+        return getSorted(allPaths).limit(maxPaths).collect(Collectors.toCollection(HashSet::new));
+    }
+
+    public Stream<Path<T>> getSorted(Collection<Path<T>> allPaths) {
         return allPaths.stream().
-                sorted(Comparator.<Path<T>>comparingInt(p -> -p.getTotalNodes()).thenComparingDouble(Path::getTotalWeight)).limit(maxPaths).
-                collect(Collectors.toCollection(HashSet::new));
+                sorted(Comparator.<Path<T>>comparingInt(p -> -p.getTotalNodes()).thenComparingDouble(Path::getTotalWeight));
     }
 }
 
@@ -33,8 +37,18 @@ class Main {
     public static void main(String[] args) {
         try {
             Graph<CommonNode> graph = getGraph();
-            EllipsePathFinder<CommonNode> pathFinder = new EllipsePathFinder<>(graph, 0.1, 10, new DummyFilter<>());
-            Set<Path<CommonNode>> paths = pathFinder.findPaths(0, 1);
+            DummyFilter<CommonNode> filter = new DummyFilter<>();
+            EllipsePathFinder<CommonNode> pathFinder = new EllipsePathFinder<>(graph, 0.1, 100, filter);
+            Edge<CommonNode> longest = graph.getEdges().stream().max(Comparator.comparingDouble(Edge::getWeight)).get();
+            int startId = longest.getFirst().getId();
+            int endId = longest.getSecond().getId();
+            Set<Path<CommonNode>> paths = pathFinder.findPaths(startId, endId);
+            Path<CommonNode> best = filter.getSorted(paths).findFirst().get();
+            MappedPath<CommonNode> mappedPath = new MappedPath<>(best);
+            int oldStartId = best.getEdges().get(0).getSecond().getOldId();
+            int oldEndId = best.getEdges().get(best.getEdges().size() - 1).getSecond().getOldId();
+            mappedPath.export("path_" + oldStartId + "_" + oldEndId + "_ellipse1_calmodulin_rmsd_full");
+
 //            Path<HierarchicalNode> bestPath = longestPathTest(graph);
 //            MappedPath.fromPath(bestPath).export("path");
 //            PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");
@@ -49,7 +63,7 @@ class Main {
     }
 
     public static Graph<CommonNode> getGraph() throws IOException {
-        FileInputStream pseudo_csv = new FileInputStream("calmodulin_best_paths.csv");
+        FileInputStream pseudo_csv = new FileInputStream("E:\\IdeaProjects\\itmo\\conformations\\matlab_scripts\\calmodulin_rmsd_full");
         PipedOutputStream convert_stream = new PipedOutputStream();
         PipedInputStream graph_description = new PipedInputStream(convert_stream);
 
@@ -79,7 +93,7 @@ class Main {
         Path<HierarchicalNode> best = longest.stream().max(estimator).get();
         System.out.println(best);
         System.out.println("Old ids:");
-        System.out.println(((MappedPath<HierarchicalNode>) best).toStringOldId());
+        System.out.println((new MappedPath<>(best)).toStringOldId());
 
         return best;
     }
