@@ -68,8 +68,8 @@ public final class Edge<T extends AbstractNode> {
     @Override
     public String toString() {
         if (first == null) {
-            return "void -> " + second.getId();
+            return "void -> " + second.toString();
         }
-        return first.getId() + " -> " + second.getId();
+        return first.toString() + " -> " + second.toString();
     }
 }

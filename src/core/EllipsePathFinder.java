@@ -23,6 +23,10 @@ public class EllipsePathFinder<T extends AbstractNode<T>> {
         this.pathFilter = pathFilter;
     }
 
+    public double getPerifocalDistShare() {
+        return perifocalDistShare;
+    }
+
     private boolean triangleInequalityHolds(T node1, T node2, T node3) {
         Edge<T> edge12 = Graph.getConnectingEdge(node1, node2);
         Edge<T> edge13 = Graph.getConnectingEdge(node1, node3);

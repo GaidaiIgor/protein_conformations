@@ -9,6 +9,7 @@ import java.util.function.BiFunction;
 public class Graph<T extends AbstractNode<T>> {
     private final List<T> nodes;
     private final List<Edge<T>> edges;
+    private String name;
 
     public Graph(List<T> nodes) {
         this.nodes = nodes;
@@ -58,6 +59,14 @@ public class Graph<T extends AbstractNode<T>> {
 
     public static <T extends AbstractNode<T>> Edge<T> getConnectingEdge(T first, T second) {
         return first.getEdges().stream().filter(e -> e.getSecond() == second).findFirst().orElse(null);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public List<Edge<T>> getEdges() {

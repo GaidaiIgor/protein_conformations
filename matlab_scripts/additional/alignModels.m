@@ -1,3 +1,4 @@
+% aligns model2 to model1
 function result = alignModels(model1, model2)
 model1Atoms = getModelAtomMatrix(model1);
 model2Atoms = getModelAtomMatrix(model2);

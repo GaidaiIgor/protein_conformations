@@ -39,12 +39,12 @@ coordsprev = [[PDBStruct.Model(1).Atom.X]' ...
 for i = 2:nModels
     coordscur = [[PDBStruct.Model(i).Atom.X]' ...
         [PDBStruct.Model(i).Atom.Y]' [PDBStruct.Model(i).Atom.Z]'];
-    cost = cost + sumAbs(coordscur, coordsprev, m);
-    %cost = cost + sum(m .* sum((coordscur - coordsprev).^2, 2));
+    cost = cost + sumSqrt(coordscur, coordsprev, m);
+%     cost = cost + sum(m .* sum((coordscur - coordsprev).^2, 2));
     coordsprev = coordscur;
 end
-cost = sum(cost);
-% cost = sum(cost .^ 2);
+% cost = sum(cost);
+cost = sum(cost .^ 2);
 end
 
 function result = sumOriginal(coordscur, coordsprev, m)

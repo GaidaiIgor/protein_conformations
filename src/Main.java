@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -36,18 +37,21 @@ class Main {
 
     public static void main(String[] args) {
         try {
-            Graph<CommonNode> graph = getGraph();
-            DummyFilter<CommonNode> filter = new DummyFilter<>();
-            EllipsePathFinder<CommonNode> pathFinder = new EllipsePathFinder<>(graph, 0.1, 100, filter);
-            Edge<CommonNode> longest = graph.getEdges().stream().max(Comparator.comparingDouble(Edge::getWeight)).get();
-            int startId = longest.getFirst().getId();
-            int endId = longest.getSecond().getId();
-            Set<Path<CommonNode>> paths = pathFinder.findPaths(startId, endId);
-            Path<CommonNode> best = filter.getSorted(paths).findFirst().get();
-            MappedPath<CommonNode> mappedPath = new MappedPath<>(best);
-            int oldStartId = best.getEdges().get(0).getSecond().getOldId();
-            int oldEndId = best.getEdges().get(best.getEdges().size() - 1).getSecond().getOldId();
-            mappedPath.export("path_" + oldStartId + "_" + oldEndId + "_ellipse1_calmodulin_rmsd_full");
+            int startId = 7;//7 9 6
+            int endId = 9;//9 18 9
+            List<String> graphsNamesSuffixes = Arrays.asList("_sqrt", "_sqrt_2");
+            String graphName = "2D21";
+            List<String> graphsNames = graphsNamesSuffixes.stream().map(suffix -> graphName + suffix).collect(Collectors.toList());
+            List<Graph<CommonNode>> graphs = getGraphs(Paths.get("E:\\IdeaProjects\\itmo\\conformations\\graphs"), graphsNames);
+
+//            for (Graph<CommonNode> graph: graphs) {
+//                List<Edge<CommonNode>> longest = graph.getEdges().stream().sorted(Comparator.comparingDouble(e -> -e.getWeight())).
+//                collect(Collectors.toList());
+//                startId = longest.get(0).getFirst().getId();
+//                endId = longest.get(0).getSecond().getId();
+//            }
+
+            generatePaths(startId, endId, Paths.get("E:\\IdeaProjects\\itmo\\conformations\\paths"), graphs);
 
 //            Path<HierarchicalNode> bestPath = longestPathTest(graph);
 //            MappedPath.fromPath(bestPath).export("path");
@@ -62,8 +66,39 @@ class Main {
         }
     }
 
-    public static Graph<CommonNode> getGraph() throws IOException {
-        FileInputStream pseudo_csv = new FileInputStream("E:\\IdeaProjects\\itmo\\conformations\\matlab_scripts\\calmodulin_rmsd_full");
+    public static List<Graph<CommonNode>> getGraphs(java.nio.file.Path graphsPath, List<String> graphsNames) throws IOException {
+        List<Graph<CommonNode>> result = new ArrayList<>();
+        for (String graphName : graphsNames) {
+            String nextGraphPath = graphsPath.resolve(graphName).toString();
+            Graph<CommonNode> graph = getGraph(nextGraphPath);
+            graph.setName(graphName);
+            result.add(graph);
+        }
+        return result;
+    }
+
+    public static void generatePaths(int startOldId, int endOldId, java.nio.file.Path pathsPath, List<Graph<CommonNode>> graphs)
+            throws IOException {
+        for (Graph<CommonNode> graph : graphs) {
+            int startId = mapFromOldId(startOldId, graph);
+            int endId = mapFromOldId(endOldId, graph);
+
+            DummyFilter<CommonNode> filter = new DummyFilter<>();
+            EllipsePathFinder<CommonNode> pathFinder = new EllipsePathFinder<>(graph, 0.2, 100, filter);
+            Set<Path<CommonNode>> paths = pathFinder.findPaths(startId, endId);
+            Path<CommonNode> best = filter.getSorted(paths).findFirst().get();
+            MappedPath<CommonNode> mappedPath = new MappedPath<>(best);
+            int oldStartId = best.getEdges().get(0).getSecond().getOldId();
+            int oldEndId = best.getEdges().get(best.getEdges().size() - 1).getSecond().getOldId();
+            String ellipseParam = String.valueOf(pathFinder.getPerifocalDistShare());
+            String nextPathPath = pathsPath.resolve("path_" + oldStartId + "_" + oldEndId + "_ellipse" + ellipseParam + "_" +
+                    graph.getName()).toString();
+            mappedPath.export(nextPathPath);
+        }
+    }
+
+    public static Graph<CommonNode> getGraph(String path) throws IOException {
+        FileInputStream pseudo_csv = new FileInputStream(path);
         PipedOutputStream convert_stream = new PipedOutputStream();
         PipedInputStream graph_description = new PipedInputStream(convert_stream);
 
@@ -79,6 +114,10 @@ class Main {
 //        graph_description.close();
 
         return graph;
+    }
+
+    public static <T extends AbstractMappedNode<T>> int mapFromOldId(int oldId, Graph<T> graph) {
+        return graph.getNodes().stream().filter(n -> n.getOldId() == oldId).findFirst().get().getId();
     }
 
     public static Path<HierarchicalNode> longestPathTest(HierarchicalGraph graph) throws IOException {

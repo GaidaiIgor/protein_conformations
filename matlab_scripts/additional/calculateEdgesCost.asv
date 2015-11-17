@@ -1,5 +1,0 @@
-function edgesCost = calculateEdgesCost(edgesNamesList, edgesPath)
-
-for i = 1:length(edgesNamesList)
-    
-end
