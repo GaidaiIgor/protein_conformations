@@ -1,8 +1,8 @@
-function result = testTransitionScores(pathToPath, proteinName, pathToEdges)
+function result = testPathTransitionScores(pathToPath, proteinName, pathToEdges)
 pathFile = fopen(pathToPath, 'rt');
 nextLine = fgetl(pathFile);
 edge = cellfun(@str2num, strsplit(nextLine));
-summaryPdb = getPdbForEdge(edge, proteinName, pathToEdges);
+summaryPdb = getOrientedPdbForEdge(edge, proteinName, pathToEdges);
 scores = edgeTransitionsScores(summaryPdb);
 while true
     nextLine = fgetl(pathFile);
@@ -10,7 +10,7 @@ while true
         break
     end
     edge = cellfun(@str2num, strsplit(nextLine));
-    edgePdb = getPdbForEdge(edge, proteinName, pathToEdges);
+    edgePdb = getOrientedPdbForEdge(edge, proteinName, pathToEdges);
     scores = [scores edgeTransitionsScores(edgePdb)];
 end
 fclose(pathFile);
