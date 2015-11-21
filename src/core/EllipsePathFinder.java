@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class EllipsePathFinder<T extends AbstractNode<T>> {
+public class EllipsePathFinder<T extends AbstractNode<T>> implements PathFinder<T> {
     private Graph<T> graph;
     private double perifocalDistShare;
     private int maxPaths;

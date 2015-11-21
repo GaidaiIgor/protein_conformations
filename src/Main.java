@@ -14,6 +14,7 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -24,7 +25,7 @@ class DummyFilter<T extends AbstractNode<T>> implements PathFilter<T> {
         return getSorted(allPaths).limit(maxPaths).collect(Collectors.toCollection(HashSet::new));
     }
 
-    public Stream<Path<T>> getSorted(Collection<Path<T>> allPaths) {
+    public static <T extends AbstractNode<T>> Stream<Path<T>> getSorted(Collection<Path<T>> allPaths) {
         return allPaths.stream().
                 sorted(Comparator.<Path<T>>comparingInt(p -> -p.getTotalNodes()).thenComparingDouble(Path::getTotalWeight));
     }
@@ -35,35 +36,36 @@ class Main {
         return IntStream.range(0, numbers.size()).boxed().min(Comparator.comparingDouble(i -> Math.abs(numbers.get(i) - value))).get();
     }
 
-    public static void main(String[] args) {
-        try {
-            int startId = 7;//7 9 6
-            int endId = 9;//9 18 9
-            List<String> graphsNamesSuffixes = Arrays.asList("_sqrt", "_sqrt_2");
-            String graphName = "2D21";
-            List<String> graphsNames = graphsNamesSuffixes.stream().map(suffix -> graphName + suffix).collect(Collectors.toList());
-            List<Graph<CommonNode>> graphs = getGraphs(Paths.get("E:\\IdeaProjects\\itmo\\conformations\\graphs"), graphsNames);
+    public static void main(String[] args) throws IOException {
+        List<String> graphsNamesSuffixes = Arrays.asList("_original_sqrt");
+        String graphName = "1EZO";
+        List<String> graphsNames = graphsNamesSuffixes.stream().map(suffix -> graphName + suffix).collect(Collectors.toList());
+        List<Graph<CommonNode>> graphs = getGraphs(Paths.get("E:\\IdeaProjects\\itmo\\conformations\\graphs"), graphsNames);
+        java.nio.file.Path output = Paths.get("E:\\IdeaProjects\\itmo\\conformations\\paths");
 
-//            for (Graph<CommonNode> graph: graphs) {
-//                List<Edge<CommonNode>> longest = graph.getEdges().stream().sorted(Comparator.comparingDouble(e -> -e.getWeight())).
-//                collect(Collectors.toList());
-//                startId = longest.get(0).getFirst().getId();
-//                endId = longest.get(0).getSecond().getId();
-//            }
+//        for (Graph<CommonNode> graph: graphs) {
+//            List<Edge<CommonNode>> longest = graph.getEdges().stream().sorted(Comparator.comparingDouble(e -> -e.getWeight())).
+//                    collect(Collectors.toList());
+//            int x = 1;
+//        }
 
-            generatePaths(startId, endId, Paths.get("E:\\IdeaProjects\\itmo\\conformations\\paths"), graphs);
+        DummyFilter<CommonNode> filter = new DummyFilter<>();
+//        EllipsePathFinder<CommonNode> pathFinder = ;
+//        new SumPathFinder<>(graph, 1, 100, filter)
 
-//            Path<HierarchicalNode> bestPath = longestPathTest(graph);
-//            MappedPath.fromPath(bestPath).export("path");
-//            PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");
-//            List<ComponentInfo> bestDecomposition = clusterizationTest(graph);
-//            List<Integer> clusterPath = clusterPath(bestPath, bestDecomposition);
-//            System.out.println("Clusters:");
-//            System.out.println(clusterPath);
-        }
-        catch (IOException exception) {
-            System.err.println(exception.getMessage());
-        }
+        findPathsForIds(Arrays.asList(9, 4, 7, 2, 2), Arrays.asList(10, 9, 9, 4, 3), graphs, output,
+                graph -> new EllipsePathFinder<>(graph, 0.1, 100, filter));
+
+//
+//
+//
+//        Path<HierarchicalNode> bestPath = longestPathTest(graph);
+//        MappedPath.fromPath(bestPath).export("path");
+//        PdbWorker.pdbForPath(bestPath, Paths.get("C:\\Users\\gaida_000.DartLenin-PC\\Desktop\\w\\out"), "out.pdb", "1CFC");
+//        List<ComponentInfo> bestDecomposition = clusterizationTest(graph);
+//        List<Integer> clusterPath = clusterPath(bestPath, bestDecomposition);
+//        System.out.println("Clusters:");
+//        System.out.println(clusterPath);
     }
 
     public static List<Graph<CommonNode>> getGraphs(java.nio.file.Path graphsPath, List<String> graphsNames) throws IOException {
@@ -77,23 +79,17 @@ class Main {
         return result;
     }
 
-    public static void generatePaths(int startOldId, int endOldId, java.nio.file.Path pathsPath, List<Graph<CommonNode>> graphs)
+    public static void findPathsForIds(List<Integer> startIds, List<Integer> endIds, List<Graph<CommonNode>> graphs,
+                                       java.nio.file.Path outputPath, Function<Graph<CommonNode>, PathFinder<CommonNode>> pathFinderBuilder)
             throws IOException {
-        for (Graph<CommonNode> graph : graphs) {
-            int startId = mapFromOldId(startOldId, graph);
-            int endId = mapFromOldId(endOldId, graph);
+        for (int i = 0; i < startIds.size(); ++i) {
+            int startId = startIds.get(i);
+            int endId = endIds.get(i);
 
-            DummyFilter<CommonNode> filter = new DummyFilter<>();
-            EllipsePathFinder<CommonNode> pathFinder = new EllipsePathFinder<>(graph, 0.2, 100, filter);
-            Set<Path<CommonNode>> paths = pathFinder.findPaths(startId, endId);
-            Path<CommonNode> best = filter.getSorted(paths).findFirst().get();
-            MappedPath<CommonNode> mappedPath = new MappedPath<>(best);
-            int oldStartId = best.getEdges().get(0).getSecond().getOldId();
-            int oldEndId = best.getEdges().get(best.getEdges().size() - 1).getSecond().getOldId();
-            String ellipseParam = String.valueOf(pathFinder.getPerifocalDistShare());
-            String nextPathPath = pathsPath.resolve("path_" + oldStartId + "_" + oldEndId + "_ellipse" + ellipseParam + "_" +
-                    graph.getName()).toString();
-            mappedPath.export(nextPathPath);
+            for (Graph<CommonNode> graph : graphs) {
+                PathFinder<CommonNode> pathFinder = pathFinderBuilder.apply(graph);
+                generatePath(startId, endId, outputPath, graph, pathFinder);
+            }
         }
     }
 
@@ -114,6 +110,32 @@ class Main {
 //        graph_description.close();
 
         return graph;
+    }
+
+    public static void generatePath(int startOldId, int endOldId, java.nio.file.Path outputPath, Graph<CommonNode> graph,
+                                    PathFinder<CommonNode> pathFinder)
+            throws IOException {
+        int startId = mapFromOldId(startOldId, graph);
+        int endId = mapFromOldId(endOldId, graph);
+
+        Set<Path<CommonNode>> paths = pathFinder.findPaths(startId, endId);
+        Path<CommonNode> best = DummyFilter.getSorted(paths).findFirst().get();
+        MappedPath<CommonNode> mappedPath = new MappedPath<>(best);
+        int oldStartId = best.getEdges().get(0).getSecond().getOldId();
+        int oldEndId = best.getEdges().get(best.getEdges().size() - 1).getSecond().getOldId();
+        String param = "";
+        String method = "";
+        if (pathFinder instanceof EllipsePathFinder) {
+            param = String.valueOf(((EllipsePathFinder) pathFinder).getPerifocalDistShare());
+            method = "ellipse";
+        }
+        if (pathFinder instanceof SumPathFinder) {
+            param = String.valueOf(((SumPathFinder) pathFinder).getAlpha());
+            method = "sum";
+        }
+        String filename = String.join("_", String.valueOf(oldStartId), String.valueOf(oldEndId), method, param, graph.getName(), ".path");
+        String nextPathPath = outputPath.resolve(filename).toString();
+        mappedPath.export(nextPathPath);
     }
 
     public static <T extends AbstractMappedNode<T>> int mapFromOldId(int oldId, Graph<T> graph) {

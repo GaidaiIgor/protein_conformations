@@ -42,5 +42,5 @@ for i = 2:nModels
     cost = cost + iterationFunction(coordscur, coordsprev, m);
     coordsprev = coordscur;
 end
-cost = sum(finishFunction(cost));
+cost = finishFunction(cost);
 end
