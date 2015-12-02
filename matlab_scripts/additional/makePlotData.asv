@@ -1,0 +1,4 @@
+function result = makePlotData(prefix, parameters, suffix)
+for p = parameters
+    fullName = strjoin({prefix, num2}
+end

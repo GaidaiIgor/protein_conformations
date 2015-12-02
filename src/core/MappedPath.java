@@ -2,6 +2,7 @@ package core;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.function.Function;
 
 public class MappedPath<T extends AbstractMappedNode<T>> {
     private Path<T> path;
@@ -19,11 +20,11 @@ public class MappedPath<T extends AbstractMappedNode<T>> {
         return builder.toString();
     }
 
-    public void export(String filename) {
+    public void export(String filename, Function<Edge<T>, String> exportFormatProvider) {
         StringBuilder builder = new StringBuilder();
         for (int i = 1; i < path.getEdges().size(); ++i) {
             Edge<T> e = path.getEdges().get(i);
-            builder.append(String.format("%d %d %d%n", e.getFirst().getOldId(), e.getSecond().getOldId(), e.getId()));
+            builder.append(exportFormatProvider.apply(e));
         }
         try (PrintWriter writer = new PrintWriter(filename)) {
             writer.write(builder.toString());

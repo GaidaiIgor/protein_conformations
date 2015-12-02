@@ -1,3 +1,6 @@
-function model = modelBackbone(model)
-model.Atom = model.Atom(ismember({model.Atom.AtomName}, {'N' 'C' 'CA'}));
+function model = modelBackbone(model, atomNames)
+if nargin < 2
+    atomNames = {'N', 'C', 'CA'};
+end
+model.Atom = model.Atom(ismember({model.Atom.AtomName}, atomNames));
 model.HeterogenAtom = [];

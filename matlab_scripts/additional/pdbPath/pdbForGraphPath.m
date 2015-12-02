@@ -1,35 +1,23 @@
-function result = pdbForGraphPath(pathToPath, proteinName, pathToEdges)
+function result = pdbForGraphPath(pathToPath, pathToEdges)
 pathFile = fopen(pathToPath, 'rt');
 nextLine = fgetl(pathFile);
 edge = cellfun(@str2num, strsplit(nextLine));
-summaryPdb = getPdbForEdge(edge, proteinName, pathToEdges);
-if edge(1) > edge(2)
-    summaryPdb.Model = summaryPdb.Model(end:-1:1);
-end
+summaryPdb = getOrientedPdbForEdge(edge, pathToEdges);
 while true
     nextLine = fgetl(pathFile);
     if ~ischar(nextLine)
         break
     end
     edge = cellfun(@str2num, strsplit(nextLine));
-    edgePdb = getPdbForEdge(edge, proteinName, pathToEdges);
-    isReverse = edge(1) > edge(2);
-    
-    % append edge
-    if isReverse
-        range = length(edgePdb.Model) - 1:-1:1;
-    else
-        range = 2:length(edgePdb.Model);
-    end
+    edgePdb = getOrientedPdbForEdge(edge, pathToEdges);
     lastModel = summaryPdb.Model(end);
-    for i = range
+    for i = 2:length(edgePdb.Model)
         nextModel = edgePdb.Model(i);
         alignedModel = alignModels(lastModel, nextModel);
         alignedModel.MDLSerNo = length(summaryPdb.Model) + 1;
         summaryPdb.Model(end + 1) = alignedModel;
         lastModel = alignedModel;
     end
-    % end append edge
 end
 fclose(pathFile);
 result = summaryPdb;

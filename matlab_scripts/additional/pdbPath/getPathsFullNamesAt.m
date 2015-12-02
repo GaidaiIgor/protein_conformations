@@ -1,4 +1,4 @@
-function pathNames = getPathsNamesAt(path)
+function pathNames = getPathsFullNamesAt(path)
 files = dir(path);
 pathNames = {};
 for file = files'

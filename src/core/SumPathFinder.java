@@ -20,11 +20,20 @@ public class SumPathFinder<T extends AbstractNode<T>> implements PathFinder<T> {
         return alpha;
     }
 
+    private boolean edgesLengthRestriction(double distanceA, double distanceB, double distanceAB) {
+        double shortDistance = Double.min(distanceA, distanceB);
+        double longDistance = Double.max(distanceA, distanceB);
+        double maxDetour = alpha * distanceAB;
+        double maxLongDistance = distanceAB - (2 * distanceAB / maxDetour - 1) * shortDistance;
+        return shortDistance + longDistance <= maxDetour && longDistance <= maxLongDistance;
+    }
+
     private boolean useNodeAsIntermediate(T start, T end, T intermediate) {
         Edge<T> direct = Graph.getConnectingEdge(start, end);
         Edge<T> edge1 = Graph.getConnectingEdge(start, intermediate);
         Edge<T> edge2 = Graph.getConnectingEdge(end, intermediate);
-        return direct != null && edge1 != null && edge2 != null && edge1.getWeight() + edge2.getWeight() <= alpha * direct.getWeight();
+        return direct != null && edge1 != null && edge2 != null &&
+                edgesLengthRestriction(edge1.getWeight(), edge2.getWeight(), direct.getWeight());
     }
 
     private Set<Path<T>> mergePaths(Set<Path<T>> pathsTo, Set<Path<T>> pathsFrom) {

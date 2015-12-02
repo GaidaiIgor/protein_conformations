@@ -1,5 +1,8 @@
-function result = getPdbForEdge(edge, proteinName, edgePath)
-firstId = min(edge(1), edge(2));
-secondId = max(edge(1), edge(2));
-edgeFileName = fullfile(edgePath, [proteinName, '_', num2str(firstId), '_', num2str(secondId), '_', num2str(edge(3)), '.pdb']);
+function result = getPdbForEdge(edge, edgePath)
+if edge(1) > edge(2)
+    temp = edge(1);
+    edge(1) = edge(2);
+    edge(2) = temp;
+end
+edgeFileName = fullfile(edgePath, [strjoin(arrayfun(@(i) cellstr(num2str(i)), edge), '_') '.pdb']);
 result = pdbread(edgeFileName);
