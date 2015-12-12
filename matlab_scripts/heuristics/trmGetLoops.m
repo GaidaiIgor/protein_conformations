@@ -81,7 +81,7 @@ loopTrm.m = trm.m(beginAngle:endAngle+3);
 loopTrm.StartCoords = trm.StartCoords(beginAngle:endAngle+3,:);
 loopTrm.FinishCoords = trm.FinishCoords(beginAngle:endAngle+3,:);
 loopTrm.r = trm.r(beginAngle:endAngle+2,:);
-loopTrm.alpha = trm.alpha(beginAngle:endAngle+1,:);
+loopTrm.kParam = trm.kParam(beginAngle:endAngle+1,:);
 loopTrm.psi = trm.psi(beginAngle:endAngle,:);
 if ~isempty(loopBorderAtomsMass)
     if beginAngle ~= 1

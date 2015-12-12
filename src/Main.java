@@ -38,13 +38,13 @@ class Main {
 
     public static void main(String[] args) throws IOException {
         List<String> graphsNamesSuffixes = Arrays.asList("_original_sqrt");
-        String graphName = "1CFC";
+        String graphName = "1EZO";
         List<String> graphsNames = graphsNamesSuffixes.stream().map(suffix -> graphName + suffix).collect(Collectors.toList());
         List<Graph<CommonNode>> graphs = getGraphs(Paths.get("E:\\IdeaProjects\\itmo\\conformations\\graphs"), graphsNames);
         java.nio.file.Path output = Paths.get("E:\\IdeaProjects\\itmo\\conformations\\paths");
 
 //        for (Graph<CommonNode> graph: graphs) {
-//            List<Edge<CommonNode>> longest = graph.getEdges().stream().sorted(Comparator.comparingDouble(e -> -e.getWeight())).
+//            List<Edge<CommonNode>> longest = graph.getEdges().stream().sorted(Comparator.comparingDouble(e -> e.getWeight())).
 //                    collect(Collectors.toList());
 //            int x = 1;
 //        }
@@ -53,9 +53,15 @@ class Main {
 //        EllipsePathFinder<CommonNode> pathFinder = ;
 //        new SumPathFinder<>(graph, 1, 100, filter)
 
-        // 1CFC_original_sqrt: Arrays.asList(11, 17, 16, 17, 9), Arrays.asList(17, 18, 17, 22, 11)
-        findPathsForIds(Arrays.asList(9), Arrays.asList(11), graphs, output,
-                graph -> new SumPathFinder<>(graph, 0.45, 100, filter));
+        // 1CFC_original_sqrt max: Arrays.asList(11, 17, 16, 17, 9), Arrays.asList(17, 18, 17, 22, 11)
+        // 1CFC_original_sqrt min: Arrays.asList(20, 3, 4, 6, 2), Arrays.asList(25, 15, 5, 11, 16)
+        // 1EZO_original_sqrt: Arrays.asList(9, 4, 7, 2, 2), Arrays.asList(10, 9, 9, 4, 3)
+        for (double param = 0.1; param <= 1; param += 0.1) {
+            double copy = Math.round(param * 10) / 10.;
+            findPathsForIds(Arrays.asList(7), Arrays.asList(9), graphs, output,
+                    graph -> new SumPathFinder<>(graph, copy, 100, filter));
+        }
+
 
 //
 //
@@ -131,7 +137,7 @@ class Main {
             method = "ellipse";
         }
         if (pathFinder instanceof SumPathFinder) {
-            param = String.valueOf(((SumPathFinder) pathFinder).getAlpha());
+            param = String.valueOf(((SumPathFinder) pathFinder).getKParam());
             method = "sum";
         }
         String filename = String.join("_", String.valueOf(oldStartId), String.valueOf(oldEndId), method, param, graph.getName()) + ".path";

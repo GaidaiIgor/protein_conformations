@@ -34,7 +34,7 @@ trmodel.t{1} = zeros(size(prevcoords));
 % model
 for i = 2:M
     currcoords = restorecoords(trmodel.r(:,i), ...
-        trmodel.alpha(:,i), trmodel.psi(:,i));
+        trmodel.kParam(:,i), trmodel.psi(:,i));
     [~, ~, temp] = procrustes(prevcoords(2:3:end,:), ...
         currcoords(2:3:end,:), 'scaling', false, 'reflection', false);
     trmodel.U{i} = temp.T;

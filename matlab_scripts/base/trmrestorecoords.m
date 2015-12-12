@@ -16,7 +16,7 @@ coordscell{1} = trmodel.StartCoords;
 
 for i = 2:m
     coordscell{i} = restorecoords(trmodel.r(:,i), ...
-        trmodel.alpha(:,i), trmodel.psi(:,i));
+        trmodel.kParam(:,i), trmodel.psi(:,i));
     
     if trmodel.type == 1
       [~,~,transform] = procrustes(coordscell{i-1}(2:3:end,:), ...

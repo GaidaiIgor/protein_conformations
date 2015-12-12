@@ -12,7 +12,7 @@ function cost = pdbTransformationCost(PDBStruct, iterationFunction, finishFuncti
 cost = 0;
 m = atomicmass({PDBStruct.Model(1).Atom.element});  % masses of the atoms
 
-% Add masses of side chains and masses of one hydrogen atoms to alpha
+% Add masses of side chains and masses of one hydrogen atoms to kParam
 % carbons.
 alphacarbonatoms = PDBStruct.Model(1).Atom( ...
     ismember({PDBStruct.Model(1).Atom.AtomName}, {'CA'}));

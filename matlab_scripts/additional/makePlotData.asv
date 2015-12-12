@@ -1,4 +1,17 @@
-function result = makePlotData(prefix, parameters, suffix)
-for p = parameters
-    fullName = strjoin({prefix, num2}
+function result = makePlotData(prefix, suffix, MAPPathPdbPath, calculations, grid, conformationsPerEdge)
+assert(calculations(1) == grid(1), 'first grid element must match first calculation point');
+result = zeros(length(grid), 3);
+MAPPathPdb = pdbread(MAPPathPdbPath);
+calcIndex = 1;
+rowNum = 1;
+for i = grid
+    if i < calculations(calcIndex)
+        result(rowNum, :) = result(rowNum - 1, :);
+        continue;
+    end
+    fullName = strjoin({prefix, num2str(i, '%.1f'), suffix}, '_');
+    pathPdb = pdbread(fullName);
+    result(i, :) = [str2double(char(p)), estimatePathsSimilarity(getPathsAlignMatrix(pathPdb, MAPPathPdb)), ...
+        (length(pathPdb.Model) - 1) / (conformationsPerEdge - 1) - 1];
+    rowNum = rowNum + 1;
 end

@@ -1,10 +1,10 @@
 function r =  circ_dist(x,y)
 %
-% r = circ_dist(alpha, beta)
+% r = circ_dist(kParam, beta)
 %   Pairwise difference x_i-y_i around the circle computed efficiently.
 %
 %   Input:
-%     alpha      sample of linear random variable
+%     kParam      sample of linear random variable
 %     beta       sample of linear random variable or one single angle
 %
 %   Output:
